@@ -34,7 +34,19 @@ installations and postgreSQL setup
 ### Server setup stuff
 
 - Install express, apollo, and deps - `yarn add express apollo-server-express graphql type-graphql`
-- Initialize express app and start listening on a port.
+- Initialize express app
+- create an apollo server instance using `const apolloServer = new ApolloServer({...options})`
+- The ApolloServer constructor requires two parameters: your schema definition and your set of resolvers.
+- start the apollo server using `await apolloServer.start()`
+- Wrap the express server with the apolloServer to define the graphQL routes on the server.
+- start listening on a port.
+
+### GraphQl & typeGraphQL stuff
+
+- Hard to document the steps as the setup flow is a bit fragmented. Check code for guiding comments. 👍🏿
+- Essentially though, we want to define a schema for our graphQL server which defines the data structure for client-side queries.
+- We define the schema by adding type-graphQL decorators to the existing entity classes already decorated by MikroOrm. Adding the `@Field` decorator to a field makes the field able to be queried on the client. An entity class must have at least one file decorated with `@Field`, however you can hide fields from the graphQL schema by omitting the `@Field` decorator from it.
+- Next we want to define resolvers for each query -> action flow we want to make available to the graphQL clients on each entity in our schema. e.g we can define a `deletePost` resolver for the `Post` entity which allows a client to execute a delete operation on a Post record in our database. The resolvers a basically functions that execute some requsted side effect and returns the appropriate data to the client.
 
 ## Headaches
 
@@ -43,6 +55,7 @@ installations and postgreSQL setup
   - Fix **[MicroOrm docs](https://mikro-orm.io/docs/property-validation#properties-with-default-value)**
 
 - Setting up postgreSQL to work with MikroOrm
+
   - Fix:
   - login to psql as target user, then alter the user's password: `alter user postgres with encrypted password 'postgres';`
   - edit `pg_hba.conf` file and change target user's login method to `md5`
