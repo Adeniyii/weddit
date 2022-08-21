@@ -50,6 +50,9 @@ installations and postgreSQL setup
   - check if this works: `psql -U postgres <databasename>`
   - then set correct password, and user in the MikroOrm init config object.
 
+- Currently type-graphql supports only graphql with major version 15 and minor version above (or equal) to 5.
+  - Fix: downgrade graphql to v^15.3.0
+
 ## Nuggets
 
 LOL I randomly got this brilliant (if i say so myself ;D) analogy of reasoning about promises (I can imagine myself breaking it out in a mentoring lesson and changing my students' lives forever).
