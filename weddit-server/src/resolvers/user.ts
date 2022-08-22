@@ -41,10 +41,20 @@ class UserResponse {
 
 @Resolver(User)
 export class UserResolver {
+	@Query(() => User, {nullable: true})
+	async me(@Ctx() {req, em}: MyContext): Promise<User | null>{
+		if (!req.session.userId){
+			return null
+		}
+		console.log(req.session)
+		const user = await em.findOne(User, {id: req.session.userId})
+		return user
+	}
+
   @Mutation(() => UserResponse)
   async register(
     @Arg("details") { username, password }: UserDetails,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     // validate username length
     if (username.length <= 2) {
@@ -80,13 +90,16 @@ export class UserResolver {
 				}]}
 			}
 		}
+
+		req.session.userId = user.id
+
     return { user };
   }
 
   @Query(() => UserResponse)
   async login(
     @Arg("details") { username, password }: UserDetails,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     // get user and validate if exists
     const user = await em.findOne(User, { username });
@@ -110,6 +123,12 @@ export class UserResolver {
       ];
       return { errors };
     }
+
+		// not storing the entire user as properties because the user info
+		// will usually change making the user information on the session stale,
+		// so we store the userId instead then use that to query for the current user info.
+		// only objects whose value doesn't change should be store on the session.
+		req.session.userId = user.id
     // all good, return validated user
     return { user };
   }

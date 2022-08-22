@@ -65,7 +65,11 @@ installations and postgreSQL setup
   - then set correct password, and user in the MikroOrm init config object.
 
 - Currently type-graphql supports only graphql with major version 15 and minor version above (or equal) to 5.
+
   - Fix: downgrade graphql to v^15.3.0
+
+- error: Property `<property>` does not exist on type `Session & Partial<SessionData>` when setting a new property on the req.session object
+  - fix `declare module "express-session" { export interface SessionData { userId: number; } }`
 
 ## Nuggets
 
