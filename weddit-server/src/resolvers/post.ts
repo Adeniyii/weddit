@@ -2,7 +2,7 @@ import { Post } from "../entities/Post";
 import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
 import { MyContext } from "../types";
 
-@Resolver()
+@Resolver(Post)
 export class PostResolver {
   // Defines a resolver to get all posts from our database
   @Query(() => [Post])

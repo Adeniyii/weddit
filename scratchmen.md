@@ -33,7 +33,7 @@ installations and postgreSQL setup
 
 ### Server setup stuff
 
-- Install express, apollo, and deps - `yarn add express apollo-server-express graphql type-graphql`
+- Install express, apollo, and deps - `yarn add express apollo-server-express graphql type-graphql class-validator`
 - Initialize express app
 - create an apollo server instance using `const apolloServer = new ApolloServer({...options})`
 - The ApolloServer constructor requires two parameters: your schema definition and your set of resolvers.
@@ -44,9 +44,10 @@ installations and postgreSQL setup
 ### GraphQl & typeGraphQL stuff
 
 - Hard to document the steps as the setup flow is a bit fragmented. Check code for guiding comments. 👍🏿
-- Essentially though, we want to define a schema for our graphQL server which defines the data structure for client-side queries.
-- We define the schema by adding type-graphQL decorators to the existing entity classes already decorated by MikroOrm. Adding the `@Field` decorator to a field makes the field able to be queried on the client. An entity class must have at least one file decorated with `@Field`, however you can hide fields from the graphQL schema by omitting the `@Field` decorator from it.
-- Next we want to define resolvers for each query -> action flow we want to make available to the graphQL clients on each entity in our schema. e.g we can define a `deletePost` resolver for the `Post` entity which allows a client to execute a delete operation on a Post record in our database. The resolvers a basically functions that execute some requsted side effect and returns the appropriate data to the client.
+- Essentially though, we want to define a schema for our graphQL/apllo server which defines the data structure for client-side queries.
+- We define the base types of the schema by adding the `@ObjectType` type-graphQL decorator to the existing entity classes already decorated by MikroOrm. Adding the `@Field` decorator to a field makes the field able to be queried on the client. An entity class must have at least one file decorated with `@Field`, however you can hide fields from the graphQL schema by omitting the `@Field` decorator from it.
+- The schema will also contain any resolvers decorated by the `@Query` or `@Mutation` decorators, and any Input types decorated by `@InputType`. Then to finally build the schema and make it available to the GraphQL/apollo server, we pass a call of type-graphql's `buildSchema` function (which accepts a config object) to the `schema` property of apolloServer's config object, then pass an array of resolver classes to the `resolver` property of `buildSchema`'s config object. `buildSchema` returns a promise, so we must await it.
+- Next we want to define resolvers for each query -> action flow we want to make available to the graphQL clients on each entity in our schema. e.g we can define a `deletePost` resolver for the `Post` entity which allows a client to execute a delete operation on a Post record in our database. The resolvers are basically functions that execute some requsted side effect and returns the appropriate data to the client.
 
 ## Headaches
 

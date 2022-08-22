@@ -6,6 +6,7 @@ import { buildSchema } from "type-graphql";
 import { __prod__ } from "./constants";
 import microConfig from "./mikro-orm.config";
 import { PostResolver } from "./resolvers/post";
+import { UserResolver } from "./resolvers/user";
 
 const main = async () => {
   const orm = await MikroORM.init(microConfig);
@@ -18,7 +19,7 @@ const main = async () => {
   // our resolvers with type-graphQL's `buildSchema()` fn
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [PostResolver],
+      resolvers: [PostResolver, UserResolver],
     }),
 		context: () => ({em: orm.em}) // Provides an Entity manager instance to the resolvers on the context object
   });

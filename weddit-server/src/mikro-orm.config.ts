@@ -2,6 +2,7 @@ import { MikroORM } from "@mikro-orm/core";
 import path from "path";
 import { __prod__ } from "./constants";
 import { Post } from "./entities/Post";
+import { User } from "./entities/User";
 
 export default {
   migrations: {
@@ -9,7 +10,7 @@ export default {
     pathTs: path.join(__dirname, "../src/migrations"), // path to the folder with TS migrations (if used, we should put path to compiled files in `path`)
     glob: "!(*.d).{js,ts}", // how to match migration files (all .js and .ts files, but not .d.ts)
   },
-  entities: [Post],
+  entities: [Post, User],
   dbName: "weddit",
   user: "postgres",
   password: "postgres",
