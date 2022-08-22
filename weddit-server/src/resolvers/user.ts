@@ -41,15 +41,46 @@ class UserResponse {
 
 @Resolver(User)
 export class UserResolver {
-  @Mutation(() => User)
+  @Mutation(() => UserResponse)
   async register(
     @Arg("details") { username, password }: UserDetails,
     @Ctx() { em }: MyContext
-  ): Promise<User> {
+  ): Promise<UserResponse> {
+    // validate username length
+    if (username.length <= 2) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "username must be longer than 2 characters",
+          },
+        ],
+      };
+    }
+    // validate password length
+    if (password.length <= 3) {
+      return {
+        errors: [
+          {
+            field: "password",
+            message: "password must be longer than 3 characters",
+          },
+        ],
+      };
+    }
     const hashedPassword = await argon.hash(password);
     const user = em.create(User, { username, passord: hashedPassword });
-    await em.persistAndFlush(user);
-    return user;
+		try{
+			await em.persistAndFlush(user);
+		} catch (err){
+			if (err.code === "23505"){
+				return {errors: [{
+					field: "username",
+					message: "username already taken"
+				}]}
+			}
+		}
+    return { user };
   }
 
   @Query(() => UserResponse)
@@ -57,7 +88,7 @@ export class UserResolver {
     @Arg("details") { username, password }: UserDetails,
     @Ctx() { em }: MyContext
   ): Promise<UserResponse> {
-		// get user and validate if exists
+    // get user and validate if exists
     const user = await em.findOne(User, { username });
     if (!user) {
       const errors: FieldError[] = [
@@ -68,7 +99,7 @@ export class UserResolver {
       ];
       return { errors };
     }
-		// get password and validate hash
+    // get password and validate hash
     const correctPword = await argon.verify(user.passord, password);
     if (!correctPword) {
       const errors: FieldError[] = [
@@ -79,7 +110,7 @@ export class UserResolver {
       ];
       return { errors };
     }
-		// all good, return validated user
+    // all good, return validated user
     return { user };
   }
 }
