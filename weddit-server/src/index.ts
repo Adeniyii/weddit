@@ -29,7 +29,7 @@ const main = async () => {
   // config to get cookie to be sent in the graphl playground
   const corsConfig = {
     credentials: true,
-    origin: "https://studio.apollographql.com",
+    origin: ["https://studio.apollographql.com", "http://localhost:3000"],
   };
 
   const RedisStore = connectRedis(session);

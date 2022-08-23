@@ -8,9 +8,11 @@
   "dependencies": {
     "classnames": "^2.3.1",
     "formik": "^2.2.9",
+    "graphql": "^16.6.0",
     "next": "latest",
     "react": "18.1.0",
-    "react-dom": "18.1.0"
+    "react-dom": "18.1.0",
+    "urql": "^3.0.1"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.2",

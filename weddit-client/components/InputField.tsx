@@ -16,7 +16,7 @@ const InputField: FC<Props> = ({ className, variant, name, label = name, ...rest
   const isError = meta.touched && meta.error;
   return (
     <Wrapper size={variant} className="">
-      <form className={className}>
+      <div className={className}>
         <label
           htmlFor={field.name}
           className="block text-sm font-semibold text-gray-700 capitalize"
@@ -39,7 +39,7 @@ const InputField: FC<Props> = ({ className, variant, name, label = name, ...rest
             <div className="text-red-300 text-sm mt-4">{meta.error}</div>
           ) : null}
         </div>
-      </form>
+      </div>
     </Wrapper>
   );
 };
