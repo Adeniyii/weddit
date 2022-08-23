@@ -34,12 +34,33 @@ installations and postgreSQL setup
 ### Server setup stuff
 
 - Install express, apollo, and deps - `yarn add express apollo-server-express graphql type-graphql class-validator`
-- Initialize express app
-- create an apollo server instance using `const apolloServer = new ApolloServer({...options})`
-- The ApolloServer constructor requires two parameters: your schema definition and your set of resolvers.
-- start the apollo server using `await apolloServer.start()`
+- Initialize an express app
+- create a new ApolloServer instance with a config object
+- The ApolloServer constructor requires at least one parameter: your schema definition.
+- start the apollo server
 - Wrap the express server with the apolloServer to define the graphQL routes on the server.
-- start listening on a port.
+- start listening on a port using the express server.
+
+```ts
+//...
+const app = express();
+
+const apolloServer = new ApolloServer({
+  schema: await buildSchema({
+    resolvers: [PostResolver, UserResolver],
+  }),
+  // Provides an Entity manager instance, and the req and res objects to the resolvers on the context object
+  context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
+});
+
+await apolloServer.start();
+
+apolloServer.applyMiddleware({ app });
+//...
+app.listen(4000, () => {
+  console.log("server started on localhost:4000");
+});
+```
 
 ### GraphQl & typeGraphQL stuff
 
@@ -48,6 +69,53 @@ installations and postgreSQL setup
 - We define the base types of the schema by adding the `@ObjectType` type-graphQL decorator to the existing entity classes already decorated by MikroOrm. Adding the `@Field` decorator to a field makes the field able to be queried on the client. An entity class must have at least one file decorated with `@Field`, however you can hide fields from the graphQL schema by omitting the `@Field` decorator from it.
 - The schema will also contain any resolvers decorated by the `@Query` or `@Mutation` decorators, and any Input types decorated by `@InputType`. Then to finally build the schema and make it available to the GraphQL/apollo server, we pass a call of type-graphql's `buildSchema` function (which accepts a config object) to the `schema` property of apolloServer's config object, then pass an array of resolver classes to the `resolver` property of `buildSchema`'s config object. `buildSchema` returns a promise, so we must await it.
 - Next we want to define resolvers for each query -> action flow we want to make available to the graphQL clients on each entity in our schema. e.g we can define a `deletePost` resolver for the `Post` entity which allows a client to execute a delete operation on a Post record in our database. The resolvers are basically functions that execute some requsted side effect and returns the appropriate data to the client.
+
+### Setting up sessions, redis, cookies
+
+- Install and configure redis, express-session, and connect-redis to setup sessions using a redis database as our storage option. Redis is optimal for sessions because it's **FAST**.
+- import and configure the session store and redis using the following:
+
+```ts
+// ...
+import session from "express-session";
+import connectRedis from "connect-redis";
+import { createClient } from "redis";
+
+const RedisStore = connectRedis(session);
+const redisClient = createClient({ legacyMode: true });
+redisClient.connect().catch(console.error);
+//...
+```
+
+- finally, we register, and configure the session middleware with the express app.
+- and we add the `RedisStore` as the target storage option for the generated sessions.
+
+```ts
+// this session middleware registration should come before the apolloserver middleware registration
+app.use(
+  session({
+    name: "qid",
+    store: new RedisStore({
+      client: redisClient,
+      disableTouch: true,
+      disableTTL: true,
+    }),
+    saveUninitialized: false,
+    secret: "keyboard cat",
+    resave: false,
+    cookie: {
+      secure: __prod__,
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // a decade of our cookies
+    },
+  })
+);
+```
+
+### Client stuff
+
+- Setup next.js and tailwind as the client stack for the frontend
 
 ## Headaches
 
@@ -69,11 +137,26 @@ installations and postgreSQL setup
   - Fix: downgrade graphql to v^15.3.0
 
 - error: Property `<property>` does not exist on type `Session & Partial<SessionData>` when setting a new property on the req.session object
+
   - fix `declare module "express-session" { export interface SessionData { userId: number; } }`
+
+- Working with cors, and allowing specific client origins to include credentials in their request to our apollo server
+  - Pretty easy fix, just specify an array of allowed origins, and set `credentials: true` on the cors property of the apolloserver middleware config
+
+```ts
+// config to get cookie to be sent in the graphl playground
+// the default for origin is "*".
+const corsConfig = {
+  credentials: true,
+  origin: ["https://studio.apollographql.com", "http://localhost:3000"],
+};
+//...
+apolloServer.applyMiddleware({ app, cors: corsConfig });
+```
 
 ## Nuggets
 
-LOL I randomly got this brilliant (if i say so myself ;D) analogy of reasoning about promises (I can imagine myself breaking it out in a mentoring lesson and changing my students' lives forever).
+LOL I randomly got this brilliant (if i say so myself ;D) analogy of reasoning about promises.
 
 - So imagine you want some food, you have two options in this imaginary world - ready-made, or still-cooking. If i asked for a meal that was already ready-made e.g a bar of chocolate, I would get it as soon as I asked for it.
 - Alternatively, what would happen if I asked for a meal that needed some time to get prepared? (Say, some rice) I would have to wait. However, in this imaginary world, the pot of rice gets handed to you (assume the pot is using solar energy 🌞).

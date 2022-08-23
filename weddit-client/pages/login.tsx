@@ -1,32 +1,32 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
 import { useRouter } from "next/router";
-import { useMutation } from "urql";
+import React from "react";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import Wrapper from "../components/Wrapper";
-import { useRegisterMutation } from "../generated/graphql";
+import { useLoginMutation } from "../generated/graphql";
 import toErrorMap from "../utils/toErrorMap";
 
-const Register = () => {
-  const [{}, register] = useRegisterMutation();
+const login = () => {
+  const [{}, login] = useLoginMutation();
   const router = useRouter();
 
   return (
     <Layout>
       <Wrapper size="medium" className="pt-[100px]">
         <Formik
+          initialValues={{ username: "", password: "" }}
           onSubmit={async (details, { setErrors }) => {
-            const response = await register({ details });
-            if (response.data?.register.errors) {
-              setErrors(toErrorMap(response.data.register.errors));
-            } else if (response.data?.register.user) {
+            const response = await login({ details });
+            if (response.data?.login.errors) {
+              setErrors(toErrorMap(response.data.login.errors));
+            } else if (response.data?.login.user) {
               router.push("/");
             }
           }}
-          initialValues={{ username: "", password: "" }}
         >
-          {({ values, handleChange }) => (
+          {({}) => (
             <Form>
               <InputField
                 name="username"
@@ -49,4 +49,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default login;

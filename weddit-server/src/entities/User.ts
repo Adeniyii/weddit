@@ -15,7 +15,7 @@ export class User {
   username!: string;
 
   @Property({ type: "text" }) // omit the `@Field` decorator here to hide it from the graphql schema, making it unqueryable by the client.
-  passord!: string;
+  password!: string;
 
   @Field(() => String)
   @Property({ type: "date" })

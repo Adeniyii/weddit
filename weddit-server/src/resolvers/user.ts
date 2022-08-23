@@ -11,6 +11,7 @@ import {
 } from "type-graphql";
 import { MyContext } from "src/types";
 import argon from "argon2";
+import { EntityManager } from "@mikro-orm/postgresql";
 
 @InputType()
 class UserDetails {
@@ -41,15 +42,15 @@ class UserResponse {
 
 @Resolver(User)
 export class UserResolver {
-	@Query(() => User, {nullable: true})
-	async me(@Ctx() {req, em}: MyContext): Promise<User | null>{
-		if (!req.session.userId){
-			return null
-		}
-		console.log(req.session)
-		const user = await em.findOne(User, {id: req.session.userId})
-		return user
-	}
+  @Query(() => User, { nullable: true })
+  async me(@Ctx() { req, em }: MyContext): Promise<User | null> {
+    if (!req.session.userId) {
+      return null;
+    }
+    console.log(req.session);
+    const user = await em.findOne(User, { id: req.session.userId });
+    return user;
+  }
 
   @Mutation(() => UserResponse)
   async register(
@@ -78,25 +79,42 @@ export class UserResolver {
         ],
       };
     }
-    const hashedPassword = await argon.hash(password);
-    const user = em.create(User, { username, passord: hashedPassword });
-		try{
-			await em.persistAndFlush(user);
-		} catch (err){
-			if (err.code === "23505"){
-				return {errors: [{
-					field: "username",
-					message: "username already taken"
-				}]}
-			}
-		}
 
-		req.session.userId = user.id
+    const hashedPassword = await argon.hash(password);
+    let user = em.create(User, {username, password});
+
+    try {
+      // example using the query builder which bypasses the ORM (for the most part)
+      const result = await (em as EntityManager)
+        .createQueryBuilder(User)
+        .getKnexQuery()
+        .insert({
+          username,
+          password: hashedPassword,
+          created_at: new Date(),
+          updated_at: new Date(),
+        }).returning("*");
+
+      user = result[0];
+    } catch (err) {
+      if (err.code === "23505") {
+        return {
+          errors: [
+            {
+              field: "username",
+              message: "username already taken",
+            },
+          ],
+        };
+      }
+    }
+
+    req.session.userId = user.id;
 
     return { user };
   }
 
-  @Query(() => UserResponse)
+  @Mutation(() => UserResponse)
   async login(
     @Arg("details") { username, password }: UserDetails,
     @Ctx() { em, req }: MyContext
@@ -113,7 +131,7 @@ export class UserResolver {
       return { errors };
     }
     // get password and validate hash
-    const correctPword = await argon.verify(user.passord, password);
+    const correctPword = await argon.verify(user.password, password);
     if (!correctPword) {
       const errors: FieldError[] = [
         {
@@ -124,11 +142,11 @@ export class UserResolver {
       return { errors };
     }
 
-		// not storing the entire user as properties because the user info
-		// will usually change making the user information on the session stale,
-		// so we store the userId instead then use that to query for the current user info.
-		// only objects whose value doesn't change should be store on the session.
-		req.session.userId = user.id
+    // not storing the entire user as properties because the user info
+    // will usually change making the user information on the session stale,
+    // so we store the userId instead then use that to query for the current user info.
+    // only objects whose value doesn't change should be store on the session.
+    req.session.userId = user.id;
     // all good, return validated user
     return { user };
   }

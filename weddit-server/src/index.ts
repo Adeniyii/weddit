@@ -27,6 +27,7 @@ const main = async () => {
   const app = express();
 
   // config to get cookie to be sent in the graphl playground
+  // the default for origin is "*".
   const corsConfig = {
     credentials: true,
     origin: ["https://studio.apollographql.com", "http://localhost:3000"],
@@ -57,7 +58,7 @@ const main = async () => {
     })
   );
 
-  // Set up the apollo server ontop of the express server,
+  // Set up the apollo server on top of the express server,
   // and provide the schema definitions to the server by registering
   // our resolvers with type-graphQL's `buildSchema()` fn
   const apolloServer = new ApolloServer({

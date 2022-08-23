@@ -1,0 +1,12 @@
+mutation Login($details: UserDetails!) {
+  login(details: $details) {
+    errors {
+      field
+      message
+    }
+    user {
+      id
+      username
+    }
+  }
+}
