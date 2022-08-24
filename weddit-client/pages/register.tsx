@@ -9,7 +9,7 @@ import { useRegisterMutation } from "../generated/graphql";
 import toErrorMap from "../utils/toErrorMap";
 
 const Register = () => {
-  const [{}, register] = useRegisterMutation();
+  const [{fetching: registering}, register] = useRegisterMutation();
   const router = useRouter();
 
   return (
@@ -40,7 +40,9 @@ const Register = () => {
                 placeholder="*********"
                 type="password"
               />
-              <Button type="submit" className="mt-10 block">submit</Button>
+              <Button type="submit" className="mt-10 block">
+                {registering ? "..." : "submit"}
+              </Button>
             </Form>
           )}
         </Formik>

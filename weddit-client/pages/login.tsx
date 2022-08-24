@@ -9,7 +9,7 @@ import { useLoginMutation } from "../generated/graphql";
 import toErrorMap from "../utils/toErrorMap";
 
 const login = () => {
-  const [{}, login] = useLoginMutation();
+  const [{fetching}, login] = useLoginMutation();
   const router = useRouter();
 
   return (
@@ -40,7 +40,9 @@ const login = () => {
                 placeholder="*********"
                 type="password"
               />
-              <Button type="submit" className="mt-10 block">submit</Button>
+              <Button type="submit" className="mt-10 block">
+                {fetching ? "..." : "submit"}
+              </Button>
             </Form>
           )}
         </Formik>

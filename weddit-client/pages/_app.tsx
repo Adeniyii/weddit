@@ -1,8 +1,20 @@
 import "styles/globals.css";
 import type { AppProps } from "next/app";
-import { Provider, createClient, dedupExchange, fetchExchange, TypedDocumentNode } from "urql";
+import {
+  Provider,
+  createClient,
+  dedupExchange,
+  fetchExchange,
+  TypedDocumentNode,
+} from "urql";
 import { cacheExchange } from "@urql/exchange-graphcache";
-import { MeDocument, LoginMutation, MeQuery, RegisterMutation } from "generated/graphql";
+import {
+  MeDocument,
+  LoginMutation,
+  MeQuery,
+  RegisterMutation,
+  LogoutMutation,
+} from "generated/graphql";
 
 const client = createClient({
   url: "http://localhost:4000/graphql",
@@ -33,6 +45,17 @@ const client = createClient({
                   return data;
                 }
                 return { me: result.register.user };
+              }
+            );
+          },
+          logout: (result: LogoutMutation, args, cache, info) => {
+            cache.updateQuery(
+              { query: MeDocument as TypedDocumentNode<MeQuery> },
+              (data) => {
+                if (!result.logout) {
+                  return data;
+                }
+                return { me: null };
               }
             );
           },
