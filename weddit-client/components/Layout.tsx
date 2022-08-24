@@ -1,17 +1,18 @@
-import React, { FC } from "react";
-import NavBar from "components/NavBar";
+import React, { FC } from 'react'
+import NavBar from './NavBar'
+import Wrapper from './Wrapper'
 
 interface Props {
-  children: React.ReactNode;
+	children: React.ReactNode
 }
 
-const Layout: FC<Props> = ({ children }) => {
-  return (
+const Layout: FC<Props> = ({children}) => {
+	return (
     <>
       <NavBar />
-      {children}
+      <Wrapper>{children}</Wrapper>
     </>
   );
-};
+}
 
-export default Layout;
+export default Layout

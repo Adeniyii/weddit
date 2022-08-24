@@ -11,14 +11,14 @@ import { useLoginMutation } from "../generated/graphql";
 import toErrorMap from "../utils/toErrorMap";
 
 const login = () => {
-  const [{fetching}, login] = useLoginMutation();
+  const [{ fetching }, login] = useLoginMutation();
   const router = useRouter();
 
   return (
     <Layout>
       <Wrapper size="medium" className="pt-[100px]">
         <Formik
-          initialValues={{ username: "", password: "" }}
+          initialValues={{ email: "", password: "" }}
           onSubmit={async (details, { setErrors }) => {
             const response = await login({ details });
             if (response.data?.login.errors) {
@@ -31,7 +31,8 @@ const login = () => {
           {({}) => (
             <Form>
               <InputField
-                name="username"
+                name="email"
+                type="email"
                 variant="small"
                 placeholder="James Dean"
                 className="mb-4"

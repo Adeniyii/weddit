@@ -14,6 +14,10 @@ export class User {
   @Property({ type: "text", unique: true })
   username!: string;
 
+  @Field()
+  @Property({ type: "text", unique: true })
+  email!: string;
+
   @Property({ type: "text" }) // omit the `@Field` decorator here to hide it from the graphql schema, making it unqueryable by the client.
   password!: string;
 

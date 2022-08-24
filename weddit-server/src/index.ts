@@ -9,11 +9,10 @@ import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import session from "express-session";
 import connectRedis from "connect-redis";
-import { createClient } from "redis";
+import Redis from "ioredis"
 import { MyContext } from "./types";
 
-// hack to fix the error: Property '<property>' does not exist on type 'Session & Partial<SessionData>
-// when setting a new property on the req.session object
+// hack to fix the error: Property '<property>' does not exist on type 'Session & Partial<SessionData> when setting a new property on the req.session object
 declare module "express-session" {
   export interface SessionData {
     [string: string]: any;
@@ -22,6 +21,7 @@ declare module "express-session" {
 
 const main = async () => {
   const orm = await MikroORM.init(microConfig);
+  // await orm.em.nativeDelete(User, {})
   await orm.getMigrator().up(); // executes any pending migrations
 
   const app = express();
@@ -34,7 +34,7 @@ const main = async () => {
   };
 
   const RedisStore = connectRedis(session);
-  const redisClient = createClient({ legacyMode: true });
+  const redisClient = new Redis()
   redisClient.connect().catch(console.error);
 
   // this session middleware registration should come before the apolloserver middleware registration
@@ -66,7 +66,7 @@ const main = async () => {
       resolvers: [PostResolver, UserResolver],
     }),
     // Provides an Entity manager instance, and the req and res objects to the resolvers on the context object
-    context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
+    context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis: redisClient }),
   });
 
   await apolloServer.start();

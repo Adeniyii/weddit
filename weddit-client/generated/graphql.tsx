@@ -21,10 +21,16 @@ export type FieldError = {
   message: Scalars['String'];
 };
 
+export type LoginDetails = {
+  email: Scalars['String'];
+  password: Scalars['String'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   addPost: Post;
   deletePost?: Maybe<Post>;
+  forgotPassword: Scalars['Boolean'];
   login: UserResponse;
   logout: Scalars['Boolean'];
   register: UserResponse;
@@ -42,8 +48,13 @@ export type MutationDeletePostArgs = {
 };
 
 
+export type MutationForgotPasswordArgs = {
+  email: Scalars['String'];
+};
+
+
 export type MutationLoginArgs = {
-  details: UserDetails;
+  details: LoginDetails;
 };
 
 
@@ -80,12 +91,14 @@ export type QueryPostArgs = {
 export type User = {
   __typename?: 'User';
   createdAt: Scalars['String'];
+  email: Scalars['String'];
   id: Scalars['ID'];
   updatedAt: Scalars['String'];
   username: Scalars['String'];
 };
 
 export type UserDetails = {
+  email: Scalars['String'];
   password: Scalars['String'];
   username: Scalars['String'];
 };
@@ -99,7 +112,7 @@ export type UserResponse = {
 export type BasicUserFragment = { __typename?: 'User', id: string, username: string };
 
 export type LoginMutationVariables = Exact<{
-  details: UserDetails;
+  details: LoginDetails;
 }>;
 
 
@@ -134,7 +147,7 @@ export const BasicUserFragmentDoc = gql`
 }
     `;
 export const LoginDocument = gql`
-    mutation Login($details: UserDetails!) {
+    mutation Login($details: LoginDetails!) {
   login(details: $details) {
     errors {
       field

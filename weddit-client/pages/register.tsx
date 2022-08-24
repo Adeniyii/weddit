@@ -10,7 +10,7 @@ import { useRegisterMutation } from "../generated/graphql";
 import toErrorMap from "../utils/toErrorMap";
 
 const Register = () => {
-  const [{fetching: registering}, register] = useRegisterMutation();
+  const [{ fetching: registering }, register] = useRegisterMutation();
   const router = useRouter();
 
   return (
@@ -25,12 +25,19 @@ const Register = () => {
               router.push("/");
             }
           }}
-          initialValues={{ username: "", password: "" }}
+          initialValues={{ username: "", email: "", password: "" }}
         >
           {({ values, handleChange }) => (
             <Form>
               <InputField
                 name="username"
+                variant="small"
+                placeholder="James Dean"
+                className="mb-4"
+              />
+              <InputField
+                name="email"
+                type="email"
                 variant="small"
                 placeholder="James Dean"
                 className="mb-4"

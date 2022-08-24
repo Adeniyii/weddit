@@ -12,12 +12,24 @@ import {
 import { MyContext } from "src/types";
 import argon from "argon2";
 import { EntityManager } from "@mikro-orm/postgresql";
-import { COOKIE_NAME } from "../constants";
+import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from "../constants";
+import { sendEmail } from "../utils/sendEmail";
+import {v4} from 'uuid'
 
 @InputType()
 class UserDetails {
   @Field()
+  email: string;
+  @Field()
   username: string;
+  @Field()
+  password: string;
+}
+
+@InputType()
+class LoginDetails {
+  @Field()
+  email: string;
   @Field()
   password: string;
 }
@@ -55,9 +67,20 @@ export class UserResolver {
 
   @Mutation(() => UserResponse)
   async register(
-    @Arg("details") { username, password }: UserDetails,
+    @Arg("details") { username, email, password }: UserDetails,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
+    // validate email pattern
+    if (!email.includes("@")) {
+      return {
+        errors: [
+          {
+            field: "email",
+            message: "email must be a valid email",
+          },
+        ],
+      };
+    }
     // validate username length
     if (username.length <= 2) {
       return {
@@ -82,7 +105,7 @@ export class UserResolver {
     }
 
     const hashedPassword = await argon.hash(password);
-    let user = em.create(User, {username, password});
+    let user = em.create(User, { username, email, password });
 
     try {
       // example using the query builder which bypasses the ORM (for the most part)
@@ -90,20 +113,31 @@ export class UserResolver {
         .createQueryBuilder(User)
         .getKnexQuery()
         .insert({
+          email,
           username,
           password: hashedPassword,
           created_at: new Date(),
           updated_at: new Date(),
-        }).returning("*");
+        })
+        .returning("*");
 
       user = result[0];
     } catch (err) {
-      if (err.code === "23505") {
+      if (err.message.includes("username")) {
         return {
           errors: [
             {
               field: "username",
               message: "username already taken",
+            },
+          ],
+        };
+      } else if (err.message.includes("email")) {
+        return {
+          errors: [
+            {
+              field: "email",
+              message: "email already taken",
             },
           ],
         };
@@ -117,16 +151,16 @@ export class UserResolver {
 
   @Mutation(() => UserResponse)
   async login(
-    @Arg("details") { username, password }: UserDetails,
+    @Arg("details") { email, password }: LoginDetails,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     // get user and validate if exists
-    const user = await em.findOne(User, { username });
+    const user = await em.findOne(User, { email });
     if (!user) {
       const errors: FieldError[] = [
         {
-          field: "username",
-          message: "username does not exist.",
+          field: "email",
+          message: "email does not exist.",
         },
       ];
       return { errors };
@@ -137,7 +171,7 @@ export class UserResolver {
       const errors: FieldError[] = [
         {
           field: "password",
-          message: `incorrect password for ${username}.`,
+          message: `incorrect password for ${email}.`,
         },
       ];
       return { errors };
@@ -153,17 +187,37 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
-  logout(@Ctx() { req, res }: MyContext){
+  logout(@Ctx() { req, res }: MyContext) {
     return new Promise((resolve) =>
       req.session.destroy((err) => {
         if (err) {
           console.log(err);
           resolve(false);
-          return
+          return;
         }
-        res.clearCookie(COOKIE_NAME)
+        res.clearCookie(COOKIE_NAME);
         resolve(true);
       })
     );
+  }
+
+  @Mutation(() => Boolean)
+  async forgotPassword(
+    @Ctx() { redis, em }: MyContext,
+    @Arg("email") email: string
+  ) {
+    const user = await em.findOne(User, { email });
+
+    if (!user){
+      return true
+    }
+
+    const token = v4()
+
+    redis.set(FORGOT_PASSWORD_PREFIX + token, user.id, "EX", 1000 * 60 * 60 * 24) // 1 day to reset your password
+
+    const body = `<a href="http://localhost:3000/change-password/${token}">reset password</a>`
+    sendEmail(email, body)
+    return true;
   }
 }

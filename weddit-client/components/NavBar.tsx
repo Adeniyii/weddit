@@ -6,18 +6,18 @@ import Button from "./Button";
 import Wrapper from "./Wrapper";
 
 const NavBar = () => {
+  const [{fetching: loggingOut}, logout] = useLogoutMutation()
   const [{ data, fetching }] = useMeQuery({
     pause: isServer()
   });
-  const [{fetching: loggingOut}, logout] = useLogoutMutation()
 
   const handleLogout = () => {
     logout({})
   }
 
   let body;
-  if (fetching){
-    // data is loading
+  if (fetching || isServer()){
+    body = <p className="ml-3 text-green-800 font-bold">...</p>;
   }else if (!data?.me){
     body = (
       <nav>
@@ -37,7 +37,7 @@ const NavBar = () => {
     );
   } else {
     body = (
-      <article className="flex items-center">
+      <div className="flex items-center">
         <p className="mr-3 text-yellow-900 font-bold">{data?.me?.username}</p>
         <Button
           type="button"
@@ -46,7 +46,7 @@ const NavBar = () => {
         >
           {loggingOut ? "..." : "Logout"}
         </Button>
-      </article>
+      </div>
     );
   }
 

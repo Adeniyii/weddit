@@ -153,6 +153,19 @@ function MyApp({ Component, pageProps }: AppProps) {
 - A normalized cache is essentially the re-normalization of our de-normalized query documents, URQL does this by querying the graphql server using the `__typename` field of the entities, and optionally an `id` field, to introspect the shape of the de-normalized entities, then using the result of that to build up a relational database of Entities/Tables of our data in cache memory.
 - For our apps normalized caches can enable more sophisticated use-cases, where different API requests update data in other parts of the app and automatically update data in our cache as we query our GraphQL API. Normalized caches can essentially keep the UI of our applications up-to-date when relational data is detected across multiple queries, mutations, or subscriptions. Read more [here](https://formidable.com/open-source/urql/docs/graphcache/normalized-caching/)
 
+### Setting up SSR selectively for better SEO on public pages
+
+- Nothing too specific to talk about here.
+- We want SSR enabled only on a few pages, so we use a higher order function `withUrqlClient` from `next-urql` with the `ssr` option enabled to wrap  pages we want to enable ssr for.
+
+```ts
+import { withUrqlClient } from 'next-urql';
+//...
+export default withUrqlClient(createURQLClient, { ssr: true })(Home)
+```
+
+- `createURQLClient` is our URQL client provider, with configuration for our caching mechanisms, etc.
+
 ## Headaches
 
 - Typescript complains when you try to create a record that has default fields e.g createdAt.
@@ -178,6 +191,8 @@ function MyApp({ Component, pageProps }: AppProps) {
 
 - Working with cors, and allowing specific client origins to include credentials in their request to our apollo server
   - Pretty easy fix, just specify an array of allowed origins, and set `credentials: true` on the cors property of the apolloserver middleware config
+
+- When dealing with hydration errors in NextJS, before trying convoluted methods with useEffects etc, first try to match the initial UI coming from the server with the UI that gets rendered once the page is loaded. The first instinct is always to tinker with what the UI is displaying after rendering, but more often than not, the easiest fix is to change the base state of the UI coming from the server, to match the UI displayed when the page first renders. If all fails, then the final fix can be to use a useEffect to execute the UI-changing action.
 
 ```ts
 // config to get cookie to be sent in the graphl playground

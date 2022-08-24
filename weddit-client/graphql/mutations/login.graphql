@@ -1,4 +1,4 @@
-mutation Login($details: UserDetails!) {
+mutation Login($details: LoginDetails!) {
   login(details: $details) {
     errors {
       field
