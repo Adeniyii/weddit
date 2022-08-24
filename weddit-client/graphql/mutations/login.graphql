@@ -5,8 +5,7 @@ mutation Login($details: UserDetails!) {
       message
     }
     user {
-      id
-      username
+      ...BasicUser
     }
   }
 }

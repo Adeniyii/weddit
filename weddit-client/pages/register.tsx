@@ -40,7 +40,7 @@ const Register = () => {
                 placeholder="*********"
                 type="password"
               />
-              <Button className="mt-10 block">submit</Button>
+              <Button type="submit" className="mt-10 block">submit</Button>
             </Form>
           )}
         </Formik>
