@@ -1,7 +1,9 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
+import { withUrqlClient } from "next-urql";
 import { useRouter } from "next/router";
 import React from "react";
+import { createURQLClient } from "utils/createURQLClient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import Wrapper from "../components/Wrapper";
@@ -51,4 +53,4 @@ const login = () => {
   );
 };
 
-export default login;
+export default withUrqlClient(createURQLClient)(login);

@@ -1,7 +1,8 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
+import { withUrqlClient } from "next-urql";
 import { useRouter } from "next/router";
-import { useMutation } from "urql";
+import { createURQLClient } from "utils/createURQLClient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import Wrapper from "../components/Wrapper";
@@ -51,4 +52,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default withUrqlClient(createURQLClient)(Register);
