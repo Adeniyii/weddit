@@ -6,31 +6,36 @@ import { MeDocument, LoginMutation, MeQuery, RegisterMutation } from "generated/
 
 const client = createClient({
   url: "http://localhost:4000/graphql",
-  fetchOptions: {credentials: "include"},
+  fetchOptions: { credentials: "include" },
+  // including `credentials` here is mandatory, to enable cookies to get sent along with
+  // a mutation/query request.
   exchanges: [
     dedupExchange,
     cacheExchange({
       updates: {
         Mutation: {
-          login: (result: LoginMutation , args, cache, info) => {
+          login: (result: LoginMutation, args, cache, info) => {
             cache.updateQuery(
               { query: MeDocument as TypedDocumentNode<MeQuery> },
               (data) => {
-                if (result.login.errors){
-                  return data
+                if (result.login.errors) {
+                  return data;
                 }
-                return {me: result.login.user};
+                return { me: result.login.user };
               }
             );
           },
           register: (result: RegisterMutation, args, cache, info) => {
-            cache.updateQuery({query: MeDocument as TypedDocumentNode<MeQuery>}, (data) => {
-              if (result.register.errors){
-                return data
+            cache.updateQuery(
+              { query: MeDocument as TypedDocumentNode<MeQuery> },
+              (data) => {
+                if (result.register.errors) {
+                  return data;
+                }
+                return { me: result.register.user };
               }
-              return {me: result.register.user}
-            })
-          }
+            );
+          },
         },
       },
     }),

@@ -116,6 +116,42 @@ app.use(
 ### Client stuff
 
 - Setup next.js and tailwind as the client stack for the frontend
+- Setup URQL client for making graphql requests to our apollo server
+
+```tsx
+import { Provider, createClient } from "urql";
+
+const client = createClient({
+  url: "http://localhost:4000/graphql",
+  fetchOptions: {credentials: "include"},
+  // including `credentials` here is mandatory, to enable cookies to get sent along with
+  // a mutation/query request.
+)}
+```
+
+- then wrap the app in an urql provider, which makes the inititlized urql client available to the entire app.
+
+```tsx
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <Provider value={client}>
+      <Component {...pageProps} />
+    </Provider>
+  );
+}
+```
+
+- Next we want to also setup graphql-code-generator which is insanely useful, and does basically everything you can think of from generating response object types for a graphql query/mutation, generating gql DocumentNode types for use when implementing a normalized cache, and it does all this through the cli, which picks up .graphql documents in a specified location, then makes a request to our graphql server to get all the type information of our Objects, Queries, Mutations, InputTypes, etc, then spits all that info into a specified file from which we can then import types/queries as we need them. Read [here](https://www.graphql-code-generator.com/docs/guides/react) for more info on setup and guides.
+
+- next we implement the login and register pages, and navbar too, simple stuff.
+
+### Caching (Part of the client, but deserves it's own sub-section)
+
+- Finally we get to caching (the fun stuff)
+- URQL uses a document cache by default which is a basic caching paradigm where unique keys are generated for every unique query, and stored in a memory cache with the value as the result of the query. Whenever an identical request is made, the result of the previously cached query is returned instead of making a network request to re-fetch the data. This behaviour depends on the request policy being used, but the default is to return from the cache unless the key doesn't exist. This paradigm uses an agressive revalidation techinique to handle mutation to a data Entity already stored in the cache. It checks the `__typename` value for all entities contained in a mutation request, and if it flags an Entity type which currently exists in the cache, it proceeds to invaidate all the cache items with that entity. Read more [here](https://formidable.com/open-source/urql/docs/basics/document-caching/)
+
+- A normalized cache is essentially the re-normalization of our de-normalized query documents, URQL does this by querying the graphql server using the `__typename` field of the entities, and optionally an `id` field, to introspect the shape of the de-normalized entities, then using the result of that to build up a relational database of Entities/Tables of our data in cache memory.
+- For our apps normalized caches can enable more sophisticated use-cases, where different API requests update data in other parts of the app and automatically update data in our cache as we query our GraphQL API. Normalized caches can essentially keep the UI of our applications up-to-date when relational data is detected across multiple queries, mutations, or subscriptions. Read more [here](https://formidable.com/open-source/urql/docs/graphcache/normalized-caching/)
 
 ## Headaches
 
