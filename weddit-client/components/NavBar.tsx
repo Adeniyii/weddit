@@ -6,10 +6,6 @@ import Wrapper from "./Wrapper";
 const NavBar = () => {
   const [{ data, fetching }, fetchMe] = useMeQuery();
 
-	useEffect(() => {
-		fetchMe({requestPolicy: "network-only"})
-	}, [])
-
   return (
     <header className="sticky top-0 left-0 w-full py-3 bg-gray-400">
       <Wrapper className="flex items-center">
