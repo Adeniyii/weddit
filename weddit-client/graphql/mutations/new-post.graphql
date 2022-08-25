@@ -1,0 +1,9 @@
+mutation NewPost($details: PostDetails!) {
+  addPost(details: $details) {
+    id
+    title
+    points
+    text
+    creatorId
+  }
+}

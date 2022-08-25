@@ -2,5 +2,8 @@ query Posts {
   posts {
     id
     title
+    points
+    text
+    creatorId
   }
 }

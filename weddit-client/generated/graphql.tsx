@@ -40,7 +40,7 @@ export type Mutation = {
 
 
 export type MutationAddPostArgs = {
-  title: Scalars['String'];
+  details: PostDetails;
 };
 
 
@@ -78,9 +78,17 @@ export type MutationUpdatePostArgs = {
 export type Post = {
   __typename?: 'Post';
   createdAt: Scalars['String'];
+  creatorId: Scalars['Float'];
   id: Scalars['ID'];
+  points: Scalars['Float'];
+  text: Scalars['String'];
   title: Scalars['String'];
   updatedAt: Scalars['String'];
+};
+
+export type PostDetails = {
+  text: Scalars['String'];
+  title: Scalars['String'];
 };
 
 export type Query = {
@@ -149,6 +157,13 @@ export type LogoutMutationVariables = Exact<{ [key: string]: never; }>;
 
 export type LogoutMutation = { __typename?: 'Mutation', logout: boolean };
 
+export type NewPostMutationVariables = Exact<{
+  details: PostDetails;
+}>;
+
+
+export type NewPostMutation = { __typename?: 'Mutation', addPost: { __typename?: 'Post', id: string, title: string, points: number, text: string, creatorId: number } };
+
 export type RegisterMutationVariables = Exact<{
   details: UserDetails;
 }>;
@@ -164,7 +179,7 @@ export type MeQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: st
 export type PostsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type PostsQuery = { __typename?: 'Query', posts: Array<{ __typename?: 'Post', id: string, title: string }> };
+export type PostsQuery = { __typename?: 'Query', posts: Array<{ __typename?: 'Post', id: string, title: string, points: number, text: string, creatorId: number }> };
 
 export const BasicErrorFragmentDoc = gql`
     fragment BasicError on FieldError {
@@ -230,6 +245,21 @@ export const LogoutDocument = gql`
 export function useLogoutMutation() {
   return Urql.useMutation<LogoutMutation, LogoutMutationVariables>(LogoutDocument);
 };
+export const NewPostDocument = gql`
+    mutation NewPost($details: PostDetails!) {
+  addPost(details: $details) {
+    id
+    title
+    points
+    text
+    creatorId
+  }
+}
+    `;
+
+export function useNewPostMutation() {
+  return Urql.useMutation<NewPostMutation, NewPostMutationVariables>(NewPostDocument);
+};
 export const RegisterDocument = gql`
     mutation register($details: UserDetails!) {
   register(details: $details) {
@@ -257,6 +287,9 @@ export const PostsDocument = gql`
   posts {
     id
     title
+    points
+    text
+    creatorId
   }
 }
     `;

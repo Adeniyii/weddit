@@ -1,5 +1,16 @@
 import { Post } from "../entities/Post";
-import { Arg, Mutation, Query, Resolver } from "type-graphql";
+import { Arg, Ctx, Field, InputType, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
+import { MyContext } from "../types";
+import { isAuth } from "../middleware/isAuth";
+
+@InputType()
+class PostDetails{
+  @Field()
+  title!: string
+  @Field()
+  text!: string
+}
+
 
 @Resolver(Post)
 export class PostResolver {
@@ -17,10 +28,13 @@ export class PostResolver {
 
   // Defines a resolver to creeate a post in our database
   @Mutation(() => Post)
+  // middleware that runs before the resolvers. Use to apply auth checks.
+  @UseMiddleware(isAuth)
   async addPost(
-    @Arg("title") title: string
+    @Ctx() { req }: MyContext,
+    @Arg("details") details: PostDetails
   ): Promise<Post> {
-    return Post.create({ title }).save();
+    return Post.create({ ...details, creatorId: req.session.userId }).save();
   }
 
   // Defines a resolver to update a post in our database

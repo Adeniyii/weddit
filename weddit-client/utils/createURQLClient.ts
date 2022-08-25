@@ -2,8 +2,9 @@ import {
   dedupExchange,
   fetchExchange,
   TypedDocumentNode,
+  Exchange
 } from "urql";
-import { cacheExchange } from "@urql/exchange-graphcache";
+import { cacheExchange, query } from "@urql/exchange-graphcache";
 import {
   MeDocument,
   LoginMutation,
@@ -11,10 +12,26 @@ import {
   RegisterMutation,
   LogoutMutation,
   ChangePasswordMutation,
+  NewPostMutation,
+  PostsDocument,
+  PostsQuery,
 } from "generated/graphql";
 import { NextUrqlClientConfig } from "next-urql";
+import { pipe, tap } from 'wonka'
+import Router from "next/router";
 
-export const createURQLClient: NextUrqlClientConfig = (exchange) => ({
+const errorExchange: Exchange = ({forward}) => (ops$) => {
+  return pipe(
+    forward(ops$),
+    tap(({error}) => {
+      if (error?.message.includes('not authenticated')){
+        Router.replace("/login")
+      }
+    })
+  )
+}
+
+export const createURQLClient: NextUrqlClientConfig = (ssrExchange) => ({
   url: "http://localhost:4000/graphql",
   fetchOptions: { credentials: "include" },
   // including `credentials` here is mandatory, to enable cookies to get sent along with
@@ -57,21 +74,31 @@ export const createURQLClient: NextUrqlClientConfig = (exchange) => ({
               }
             );
           },
-          changePassword(result: ChangePasswordMutation, args, cache, info){
+          changePassword(result: ChangePasswordMutation, args, cache, info) {
             cache.updateQuery(
               { query: MeDocument as TypedDocumentNode<MeQuery> },
               (data) => {
-                if (result.changePassword.errors){
-                  return data
+                if (result.changePassword.errors) {
+                  return data;
                 }
-                return { me: result.changePassword.user }
+                return { me: result.changePassword.user };
+              }
+            );
+          },
+          addPost: (result: NewPostMutation, args, cache, info) => {
+            cache.updateQuery(
+              { query: PostsDocument as TypedDocumentNode<PostsQuery> },
+              (data) => {
+                data?.posts.push(result.addPost)
+                return data
               }
             );
           }
         },
       },
     }),
-    exchange,
+    errorExchange,
+    ssrExchange,
     fetchExchange,
   ],
 });

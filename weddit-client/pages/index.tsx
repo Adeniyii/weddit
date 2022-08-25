@@ -18,9 +18,16 @@ const Home: NextPage = () => {
             ? data?.posts.map((post) => <li key={post.id}>{post.title}</li>)
             : "...loading"}
         </ul>
-        <Link href="/forgot-password" passHref>
-          <a className="mt-5 text-gray-600 hover:underline">forgot password?</a>
-        </Link>
+        <div className="flex flex-col">
+          <Link href="/forgot-password" passHref>
+            <a className="mt-5 text-blue-600 hover:underline">
+              forgot password?
+            </a>
+          </Link>
+          <Link href="/post" passHref>
+            <a className="mt-5 text-blue-600 hover:underline">post</a>
+          </Link>
+        </div>
       </Layout>
     </>
   );

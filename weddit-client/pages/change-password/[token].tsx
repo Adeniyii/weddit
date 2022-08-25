@@ -4,16 +4,16 @@ import Layout from "components/Layout";
 import Wrapper from "components/Wrapper";
 import { Formik, Form } from "formik";
 import { useChangePasswordMutation } from "generated/graphql";
-import { NextPage } from "next";
 import { withUrqlClient } from "next-urql";
-import router from "next/router";
+import {useRouter} from "next/router";
 import React, { useEffect, useState } from "react";
 import { createURQLClient } from "utils/createURQLClient";
 import toErrorMap from "utils/toErrorMap";
 
-const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
+const ChangePassword = () => {
   const [{ fetching, data }, changePassword] = useChangePasswordMutation();
   const [tokenError, setTokenError] = useState<string | null>()
+  const router = useRouter()
 
   useEffect(() => {
     if (tokenError){
@@ -29,7 +29,7 @@ const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
         <Formik
           initialValues={{ newPassword: "" }}
           onSubmit={async ({ newPassword }, { setErrors }) => {
-            const response = await changePassword({ newPassword, token });
+            const response = await changePassword({ newPassword, token: router.query?.token as string || "" });
             if (response.data?.changePassword.errors) {
               const errorMap = toErrorMap(response.data.changePassword.errors);
               if ('token' in errorMap) setTokenError(errorMap.token)
@@ -59,12 +59,6 @@ const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
       </Wrapper>
     </Layout>
   );
-};
-
-ChangePassword.getInitialProps = ({ query }) => {
-  return {
-    token: query.token as string,
-  };
 };
 
 export default withUrqlClient(createURQLClient)(ChangePassword);

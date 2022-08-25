@@ -22,7 +22,7 @@ declare module "express-session" {
 
 const main = async () => {
   // Typeorm setup
-  new DataSource({
+  await new DataSource({
     entities: [Post, User],
     database: "weddit2",
     username: "postgres",
@@ -30,13 +30,11 @@ const main = async () => {
     type: "postgres",
     synchronize: true, // creates tables automatically from new entities without having to run migrations like in mikroorm
     logging: true,
-  })
-    .initialize()
-    .catch((err) => {
-      console.error("Error during Typeorm initialization:", err);
-    });
+  }).initialize()
 
   const app = express();
+  // to enable apollo playground to send cookies to this server
+  // app.set('trust proxy', !__prod__)
 
   // config to get cookie to be sent in the graphl playground
   // the default for origin is "*".
