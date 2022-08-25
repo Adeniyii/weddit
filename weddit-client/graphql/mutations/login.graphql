@@ -1,11 +1,5 @@
 mutation Login($details: LoginDetails!) {
   login(details: $details) {
-    errors {
-      field
-      message
-    }
-    user {
-      ...BasicUser
-    }
+    ...BasicUserResponse
   }
 }

@@ -10,6 +10,7 @@ import {
   MeQuery,
   RegisterMutation,
   LogoutMutation,
+  ChangePasswordMutation,
 } from "generated/graphql";
 import { NextUrqlClientConfig } from "next-urql";
 
@@ -56,6 +57,17 @@ export const createURQLClient: NextUrqlClientConfig = (exchange) => ({
               }
             );
           },
+          changePassword(result: ChangePasswordMutation, args, cache, info){
+            cache.updateQuery(
+              { query: MeDocument as TypedDocumentNode<MeQuery> },
+              (data) => {
+                if (result.changePassword.errors){
+                  return data
+                }
+                return { me: result.changePassword.user }
+              }
+            );
+          }
         },
       },
     }),

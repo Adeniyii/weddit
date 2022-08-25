@@ -14,7 +14,7 @@ import argon from "argon2";
 import { EntityManager } from "@mikro-orm/postgresql";
 import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from "../constants";
 import { sendEmail } from "../utils/sendEmail";
-import {v4} from 'uuid'
+import { v4 } from "uuid";
 
 @InputType()
 class UserDetails {
@@ -208,16 +208,81 @@ export class UserResolver {
   ) {
     const user = await em.findOne(User, { email });
 
-    if (!user){
-      return true
+    if (!user) {
+      return true;
     }
 
-    const token = v4()
+    const token = v4();
 
-    redis.set(FORGOT_PASSWORD_PREFIX + token, user.id, "EX", 1000 * 60 * 60 * 24) // 1 day to reset your password
+    // set user refresh password token in redis database to be looked up when the change password mutation is called
+    // key -> prefix + token, value -> userId
+    redis.set(
+      FORGOT_PASSWORD_PREFIX + token,
+      user.id,
+      "EX",
+      1000 * 60 * 60 * 24
+    ); // 1 day to reset your password
 
-    const body = `<a href="http://localhost:3000/change-password/${token}">reset password</a>`
-    sendEmail(email, body)
+    // send an email containing a link embedded with the generated token to the user to be used to change their password.
+    const body = `<a href="http://localhost:3000/change-password/${token}">reset password</a>`;
+    sendEmail(email, body);
     return true;
+  }
+
+  @Mutation(() => UserResponse)
+  async changePassword(
+    @Arg("token") token: string,
+    @Arg("newPassword") newPassword: string,
+    @Ctx() { redis, req, em }: MyContext
+  ): Promise<UserResponse> {
+    if (newPassword.length <= 3) {
+      return {
+        errors: [
+          {
+            field: "newPassword",
+            message: "password must be at least 3 characters",
+          },
+        ],
+      };
+    }
+
+    const key = FORGOT_PASSWORD_PREFIX + token;
+    const userId = await redis.get(key);
+
+    if (!userId) {
+      return {
+        errors: [
+          {
+            field: "token",
+            message: "invalid token",
+          },
+        ],
+      };
+    }
+
+    const user = await em.findOne(User, { id: parseInt(userId as string) });
+
+    if (!user) {
+      return {
+        errors: [
+          {
+            field: "token",
+            message: "user does not exist anymore",
+          },
+        ],
+      };
+    }
+
+    user.password = await argon.hash(newPassword);
+    em.persistAndFlush(user);
+    // remove token from redis db, so a user cannot user that same refresh password token again
+    await redis.del(key)
+
+    // log the user in after changing their password // totally optional depending on the required behaviour
+    req.session.userId = user.id;
+
+    return {
+      user,
+    };
   }
 }
