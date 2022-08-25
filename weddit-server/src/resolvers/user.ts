@@ -11,7 +11,6 @@ import {
 } from "type-graphql";
 import { MyContext } from "src/types";
 import argon from "argon2";
-import { EntityManager } from "@mikro-orm/postgresql";
 import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from "../constants";
 import { sendEmail } from "../utils/sendEmail";
 import { v4 } from "uuid";
@@ -56,19 +55,18 @@ class UserResponse {
 @Resolver(User)
 export class UserResolver {
   @Query(() => User, { nullable: true })
-  async me(@Ctx() { req, em }: MyContext): Promise<User | null> {
+  me(@Ctx() { req }: MyContext): Promise<User | null> | null {
     if (!req.session.userId) {
       return null;
     }
     console.log(req.session);
-    const user = await em.findOne(User, { id: req.session.userId });
-    return user;
+    return User.findOne({ where: { id: req.session.userId } });
   }
 
   @Mutation(() => UserResponse)
   async register(
     @Arg("details") { username, email, password }: UserDetails,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     // validate email pattern
     if (!email.includes("@")) {
@@ -103,27 +101,21 @@ export class UserResolver {
         ],
       };
     }
-
     const hashedPassword = await argon.hash(password);
-    let user = em.create(User, { username, email, password });
-
+    let user = null;
     try {
-      // example using the query builder which bypasses the ORM (for the most part)
-      const result = await (em as EntityManager)
-        .createQueryBuilder(User)
-        .getKnexQuery()
-        .insert({
-          email,
-          username,
-          password: hashedPassword,
-          created_at: new Date(),
-          updated_at: new Date(),
-        })
-        .returning("*");
+      // example using the query builder
+      // equivalent to just doing => User.create({ email, username, password: hashedPassword }).save()
+      // but leaving this here as using the queryBuilder can be useful sometimes.. maybe
+      const result = await User.createQueryBuilder()
+        .insert()
+        .values({ email, username, password: hashedPassword })
+        .returning("*")
+        .execute();
 
-      user = result[0];
+      user = result.raw[0];
     } catch (err) {
-      if (err.message.includes("username")) {
+      if (err.detail.includes("username")) {
         return {
           errors: [
             {
@@ -132,7 +124,7 @@ export class UserResolver {
             },
           ],
         };
-      } else if (err.message.includes("email")) {
+      } else if (err.detail.includes("email")) {
         return {
           errors: [
             {
@@ -152,10 +144,10 @@ export class UserResolver {
   @Mutation(() => UserResponse)
   async login(
     @Arg("details") { email, password }: LoginDetails,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     // get user and validate if exists
-    const user = await em.findOne(User, { email });
+    const user = await User.findOne({where: {email}});
     if (!user) {
       const errors: FieldError[] = [
         {
@@ -203,10 +195,10 @@ export class UserResolver {
 
   @Mutation(() => Boolean)
   async forgotPassword(
-    @Ctx() { redis, em }: MyContext,
+    @Ctx() { redis }: MyContext,
     @Arg("email") email: string
   ) {
-    const user = await em.findOne(User, { email });
+    const user = await User.findOne({where: { email }});
 
     if (!user) {
       return true;
@@ -233,7 +225,7 @@ export class UserResolver {
   async changePassword(
     @Arg("token") token: string,
     @Arg("newPassword") newPassword: string,
-    @Ctx() { redis, req, em }: MyContext
+    @Ctx() { redis, req }: MyContext
   ): Promise<UserResponse> {
     if (newPassword.length <= 3) {
       return {
@@ -260,7 +252,8 @@ export class UserResolver {
       };
     }
 
-    const user = await em.findOne(User, { id: parseInt(userId as string) });
+    const idNum = parseInt(userId as string);
+    const user = await User.findOne({where: { id: idNum }});
 
     if (!user) {
       return {
@@ -273,8 +266,8 @@ export class UserResolver {
       };
     }
 
-    user.password = await argon.hash(newPassword);
-    em.persistAndFlush(user);
+    await User.update({ id: idNum }, { password: await argon.hash(newPassword) });
+
     // remove token from redis db, so a user cannot user that same refresh password token again
     await redis.del(key)
 

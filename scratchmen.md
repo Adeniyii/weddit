@@ -25,6 +25,18 @@ installations and postgreSQL setup
 - Initialize mikro-orm client with config options. **Bonus**: used some black magic to match types from the imported MikroOrm config with the `MikroOrm.init()` function.
 - create our fist entity `Posts` but not storing in the database yet.
 - configure our mikro-orm cli so we can create our entity tables - add a `migrations` property to the MikroOrm config object, which tells the cli where to find the migrations, and which file patterns to match.
+- also add a mikrooorm property to package.json, to enable ts-node, and point the cli to the correct config files
+
+```json
+"mikro-orm": {
+    "useTsNode": true,
+    "configPaths": [
+      "./src/mikro-orm.config.ts",
+      "./dist/mikro-orm.config.js"
+    ]
+  }
+```
+
 - create our first migration - `npx mikro-orm migration:create`
 - what are migrations? - [Answer from prisma](https://www.prisma.io/dataguide/types/relational/what-are-database-migrations)
 - programmatically execute migrations in code using `await orm.getMigrator().up();` after initializing the MikroOrm instance.

@@ -1,16 +1,17 @@
-import { MikroORM } from "@mikro-orm/core";
 import { ApolloServer } from "apollo-server-express";
 import express from "express";
 import { buildSchema } from "type-graphql";
 
 import { COOKIE_NAME, __prod__ } from "./constants";
-import microConfig from "./mikro-orm.config";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import Redis from "ioredis"
 import { MyContext } from "./types";
+import {DataSource} from 'typeorm'
+import { Post } from "./entities/Post";
+import { User } from "./entities/User";
 
 // hack to fix the error: Property '<property>' does not exist on type 'Session & Partial<SessionData> when setting a new property on the req.session object
 declare module "express-session" {
@@ -20,9 +21,20 @@ declare module "express-session" {
 }
 
 const main = async () => {
-  const orm = await MikroORM.init(microConfig);
-  // await orm.em.nativeDelete(User, {})
-  await orm.getMigrator().up(); // executes any pending migrations
+  // Typeorm setup
+  new DataSource({
+    entities: [Post, User],
+    database: "weddit2",
+    username: "postgres",
+    password: "postgres",
+    type: "postgres",
+    synchronize: true, // creates tables automatically from new entities without having to run migrations like in mikroorm
+    logging: true,
+  })
+    .initialize()
+    .catch((err) => {
+      console.error("Error during Typeorm initialization:", err);
+    });
 
   const app = express();
 
@@ -66,7 +78,7 @@ const main = async () => {
       resolvers: [PostResolver, UserResolver],
     }),
     // Provides an Entity manager instance, and the req and res objects to the resolvers on the context object
-    context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis: redisClient }),
+    context: ({ req, res }): MyContext => ({ req, res, redis: redisClient }),
   });
 
   await apolloServer.start();
