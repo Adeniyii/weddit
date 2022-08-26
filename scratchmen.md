@@ -167,16 +167,79 @@ function MyApp({ Component, pageProps }: AppProps) {
 
 ### Setting up SSR selectively for better SEO on public pages
 
-- Nothing too specific to talk about here.
-- We want SSR enabled only on a few pages, so we use a higher order function `withUrqlClient` from `next-urql` with the `ssr` option enabled to wrap  pages we want to enable ssr for.
+- The benefit of setting up server side rendering (ssr) is to improve seo on pages we want to be indexed/crawled by search engines, thus making those pages easily searchable by anyone on the internet.
+- We want the queries on the ssr enabled pages to be executed on the server, this happens before any html is sent to the client. Then once all queries have been executed, the html is built using the queried data, and then sent to the client with all necessary information displayed. After the initial html is sent, regular client-side rendering should then kick in, so that we can dynamically change the behaviour and contents of a page after initial load.
+- URQL provides a simple way to achieved all our ssr dreams. We want SSR enabled only on a few pages, so we use a higher order function `withUrqlClient` from `next-urql` with the `ssr` option enabled to wrap pages we want to enable ssr for.
 
 ```ts
-import { withUrqlClient } from 'next-urql';
+import { withUrqlClient } from "next-urql";
 //...
-export default withUrqlClient(createURQLClient, { ssr: true })(Home)
+export default withUrqlClient(createURQLClient, { ssr: true })(Home);
 ```
 
-- `createURQLClient` is our URQL client provider, with configuration for our caching mechanisms, etc.
+- `createURQLClient` is our URQL client provider, with configuration for our caching mechanisms, etc. The `createURQLClient` function is passed a single argument `ssrExchange` by `withUrqlClient`. This exchange should be added to our existing list of exchanges.
+
+```tsx
+export const createURQLClient: NextUrqlClientConfig = (ssrExchange) => ({
+  url: "http://localhost:4000/graphql",
+  fetchOptions: { credentials: "include" },
+  // including `credentials` here is mandatory, to enable cookies to get sent along with
+  // a mutation/query request.
+  exchanges: [
+    dedupExchange,
+    cacheExchange({..cacheUpdatingLogic})
+    errorExchange,
+    ssrExchange,
+    fetchExchange,
+  ],
+});
+```
+
+- Read more [here](https://formidable.com/open-source/urql/docs/advanced/server-side-rendering/#nextjs)
+
+### Converting from mikroOrm to TypeOrm
+
+- Nothing much to talk about here, as the two packages are incredibly identical. We switched because TypeOrm offers a better mechanism for implementing relationships between tables. finito
+
+### Middleware from Typegraphql
+
+- Middlewares from TypeGraphql are functions that runs before the resolvers are executed, and also recieves the arguments passed to the resolvers (context, args, root, parent). This can be used to implement streamlined authentication checks, and argument validation.
+- It is attached to a resolver using a `@UseMiddleware(middlewareFn)` decorator which revieves the middleware function you've written.
+- The `next()` function is used to hand over execution to the next item on the stack (either the resolver, or another middleware)
+- Read more about TypeGraphql's middlewares [here](https://typegraphql.com/docs/middlewares.html).. they are pretty awesome
+- This is the auth middleware I wrote for the posts field. It checks if there is a currently logged in user, before going on to execute the resolver.
+
+```tsx
+import { MyContext } from "../types";
+import { MiddlewareFn } from "type-graphql";
+
+// Checks if there is a currently authenticated user, by checking the session oject for a userId
+export const isAuth: MiddlewareFn<MyContext> = ({ context, args }, next) => {
+  console.log("==== args: ", args);
+
+  if (!context.req.session.userId) {
+    throw new Error("User not authenticated");
+  }
+  return next();
+};
+```
+
+### Add global error handling on the client using URQL's errorExchange
+
+- we add the global error handling by adding URQL's errorExchange to our list of exchanges, and defining an onError method in the config object.
+- Read more about exchanges [here](https://formidable.com/open-source/urql/docs/advanced/authoring-exchanges/#using-exchanges)
+
+```ts
+// ...
+errorExchange({
+  onError(error) {
+    if (error?.message.includes("not authenticated")) {
+      Router.replace("/login");
+    }
+  },
+}),
+// ...
+```
 
 ## Headaches
 
@@ -202,6 +265,7 @@ export default withUrqlClient(createURQLClient, { ssr: true })(Home)
   - fix `declare module "express-session" { export interface SessionData { userId: number; } }`
 
 - Working with cors, and allowing specific client origins to include credentials in their request to our apollo server
+
   - Pretty easy fix, just specify an array of allowed origins, and set `credentials: true` on the cors property of the apolloserver middleware config
 
 - When dealing with hydration errors in NextJS, before trying convoluted methods with useEffects etc, first try to match the initial UI coming from the server with the UI that gets rendered once the page is loaded. The first instinct is always to tinker with what the UI is displaying after rendering, but more often than not, the easiest fix is to change the base state of the UI coming from the server, to match the UI displayed when the page first renders. If all fails, then the final fix can be to use a useEffect to execute the UI-changing action.

@@ -28,7 +28,7 @@ export class PostResolver {
 
   // Defines a resolver to creeate a post in our database
   @Mutation(() => Post)
-  // middleware that runs before the resolvers. Use to apply auth checks.
+  // middleware that runs before the resolvers. Use to apply auth checks, validation, etc.
   @UseMiddleware(isAuth)
   async addPost(
     @Ctx() { req }: MyContext,

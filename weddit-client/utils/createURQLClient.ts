@@ -1,26 +1,20 @@
+import { cacheExchange } from "@urql/exchange-graphcache";
 import {
-  dedupExchange,
-  fetchExchange,
-  TypedDocumentNode,
-  Exchange
-} from "urql";
-import { cacheExchange, query } from "@urql/exchange-graphcache";
-import {
-  MeDocument,
-  LoginMutation,
-  MeQuery,
-  RegisterMutation,
-  LogoutMutation,
-  ChangePasswordMutation,
-  NewPostMutation,
+  ChangePasswordMutation, LoginMutation, LogoutMutation, MeDocument, MeQuery, NewPostMutation,
   PostsDocument,
-  PostsQuery,
+  PostsQuery, RegisterMutation
 } from "generated/graphql";
 import { NextUrqlClientConfig } from "next-urql";
-import { pipe, tap } from 'wonka'
 import Router from "next/router";
+import {
+  dedupExchange, errorExchange, fetchExchange,
+  TypedDocumentNode
+} from "urql";
 
-const errorExchange: Exchange = ({forward}) => (ops$) => {
+// This is an optional custom errorExchange for catching global errors,
+// URQL now provides a default error exchange, so this is not needed anymore.
+// import { pipe, tap } from 'wonka'
+/* const errorExchange: Exchange = ({forward}) => (ops$) => {
   return pipe(
     forward(ops$),
     tap(({error}) => {
@@ -29,7 +23,7 @@ const errorExchange: Exchange = ({forward}) => (ops$) => {
       }
     })
   )
-}
+} */
 
 export const createURQLClient: NextUrqlClientConfig = (ssrExchange) => ({
   url: "http://localhost:4000/graphql",
@@ -89,15 +83,21 @@ export const createURQLClient: NextUrqlClientConfig = (ssrExchange) => ({
             cache.updateQuery(
               { query: PostsDocument as TypedDocumentNode<PostsQuery> },
               (data) => {
-                data?.posts.push(result.addPost)
-                return data
+                data?.posts.push(result.addPost);
+                return data;
               }
             );
-          }
+          },
         },
       },
     }),
-    errorExchange,
+    errorExchange({
+      onError(error) {
+        if (error?.message.includes("not authenticated")) {
+          Router.replace("/login");
+        }
+      },
+    }),
     ssrExchange,
     fetchExchange,
   ],
