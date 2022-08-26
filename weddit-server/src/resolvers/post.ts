@@ -7,6 +7,7 @@ import {
   InputType,
   Int,
   Mutation,
+  ObjectType,
   Query,
   Resolver,
   Root,
@@ -23,6 +24,14 @@ class PostDetails {
   text!: string;
 }
 
+@ObjectType()
+class PaginatedPosts {
+  @Field(() => [Post])
+  posts: Post[]
+  @Field()
+  next: boolean
+}
+
 @Resolver(Post)
 export class PostResolver {
   // This field resolver can also be placed in the entity class as an extra field
@@ -32,11 +41,13 @@ export class PostResolver {
   }
 
   // Defines a resolver to get all posts from our database
-  @Query(() => [Post])
+  @Query(() => PaginatedPosts)
   async posts(
     @Arg("limit", () => Int, {defaultValue: 10, nullable: true}) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string
-  ): Promise<Post[]> {
+  ): Promise<PaginatedPosts> {
+    // To cap the posts queried by the client at 50 items
+    const realLimit = Math.min(50, limit)
     // Using the querybuilder to implement custom pagination logic using a limit and cursor strategy.
     const qb = Post.createQueryBuilder("P")
       .orderBy('"createdAt"', "DESC") // adding two quotes to createdAt to persist the capital cased `At`, else it throws an error
@@ -44,7 +55,11 @@ export class PostResolver {
     if (cursor){
       qb.where('"createdAt" < :cursor', { cursor: new Date(parseInt(cursor)) });
     }
-    return qb.take(limit).getMany();
+    // using + 1 to fetch more than the user requested, as a way to check if there are any more posts after what was requested
+    const result = await qb.take(realLimit + 1).getMany();
+    // check if fetched more than the user requested
+    const fetchedMore = result.length > realLimit
+    return {posts: fetchedMore ? result.slice(0, result.length - 1) : result, next: fetchedMore}
   }
 
   // Defines a resolver to get a post from our database

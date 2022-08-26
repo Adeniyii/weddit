@@ -6,13 +6,11 @@ import Layout from "components/Layout";
 import Link from "next/link";
 import PostCard from "components/PostCard";
 import Button from "components/Button";
+import { useState } from "react";
 
 const Home: NextPage = () => {
-  const [{ data, fetching }] = usePostsQuery({
-    variables: {
-      limit: 5,
-    },
-  });
+  const [variables, setVariables] = useState({cursor: null as null | string, limit: 33})
+  const [{ data, fetching }] = usePostsQuery({ variables });
 
   return (
     <>
@@ -26,13 +24,13 @@ const Home: NextPage = () => {
         <br />
         <ul className="flex flex-col gap-2 w-full">
           {data?.posts
-            ? data?.posts.map((post) => <PostCard key={post.id} post={post} />)
-            : fetching
-            ? "...loading"
-            : "No posts"}
+            ? data?.posts.posts.map((post) => <PostCard key={post.id} post={post} />)
+            : "...loading"}
         </ul>
-        {!fetching && data?.posts ? (
-          <Button type="submit" className="mt-5">
+        {!fetching && data?.posts && data.posts.next ? (
+          <Button type="submit" className="mt-5" onClick={() => {
+            setVariables(prev => ({...prev, cursor: data.posts.posts[data.posts.posts.length -1].createdAt}))
+          }}>
             Load more
           </Button>
         ) : null}

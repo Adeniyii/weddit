@@ -75,6 +75,12 @@ export type MutationUpdatePostArgs = {
   title: Scalars['String'];
 };
 
+export type PaginatedPosts = {
+  __typename?: 'PaginatedPosts';
+  next: Scalars['Boolean'];
+  posts: Array<Post>;
+};
+
 export type Post = {
   __typename?: 'Post';
   createdAt: Scalars['String'];
@@ -96,7 +102,7 @@ export type Query = {
   __typename?: 'Query';
   me?: Maybe<User>;
   post?: Maybe<Post>;
-  posts: Array<Post>;
+  posts: PaginatedPosts;
 };
 
 
@@ -189,7 +195,7 @@ export type PostsQueryVariables = Exact<{
 }>;
 
 
-export type PostsQuery = { __typename?: 'Query', posts: Array<{ __typename?: 'Post', id: string, title: string, points: number, text: string, creatorId: number, createdAt: string, updatedAt: string, snippet: string }> };
+export type PostsQuery = { __typename?: 'Query', posts: { __typename?: 'PaginatedPosts', next: boolean, posts: Array<{ __typename?: 'Post', id: string, text: string, title: string, points: number, snippet: string, creatorId: number, updatedAt: string, createdAt: string }> } };
 
 export const BasicErrorFragmentDoc = gql`
     fragment BasicError on FieldError {
@@ -295,14 +301,17 @@ export function useMeQuery(options?: Omit<Urql.UseQueryArgs<MeQueryVariables>, '
 export const PostsDocument = gql`
     query Posts($cursor: String, $limit: Int) {
   posts(cursor: $cursor, limit: $limit) {
-    id
-    title
-    points
-    text
-    creatorId
-    createdAt
-    updatedAt
-    snippet
+    posts {
+      id
+      text
+      title
+      points
+      snippet
+      creatorId
+      updatedAt
+      createdAt
+    }
+    next
   }
 }
     `;

@@ -34,7 +34,8 @@ const main = async () => {
     migrations: [path.join(__dirname, "migrations/*.js")]
   }).initialize()
 
-  // conn.runMigrations()
+  await conn.runMigrations()
+  // await Post.clear()
 
   const app = express();
   // to enable apollo playground to send cookies to this server
