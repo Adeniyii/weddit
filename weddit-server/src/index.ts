@@ -12,6 +12,7 @@ import { MyContext } from "./types";
 import {DataSource} from 'typeorm'
 import { Post } from "./entities/Post";
 import { User } from "./entities/User";
+import path from "path";
 
 // hack to fix the error: Property '<property>' does not exist on type 'Session & Partial<SessionData> when setting a new property on the req.session object
 declare module "express-session" {
@@ -22,7 +23,7 @@ declare module "express-session" {
 
 const main = async () => {
   // Typeorm setup
-  await new DataSource({
+  const conn = await new DataSource({
     entities: [Post, User],
     database: "weddit2",
     username: "postgres",
@@ -30,7 +31,10 @@ const main = async () => {
     type: "postgres",
     synchronize: true, // creates tables automatically from new entities without having to run migrations like in mikroorm
     logging: true,
+    migrations: [path.join(__dirname, "migrations/*.js")]
   }).initialize()
+
+  // conn.runMigrations()
 
   const app = express();
   // to enable apollo playground to send cookies to this server

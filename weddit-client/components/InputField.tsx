@@ -2,8 +2,6 @@ import { useField } from "formik";
 import React, { FC, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import cn from 'classnames'
 
-import Wrapper from "./Wrapper";
-
 // allows us to pass any valid html attributes to this component
 type Props = InputHTMLAttributes<HTMLInputElement> & TextareaHTMLAttributes<HTMLTextAreaElement> & {
       variant?: "small" | "medium";
@@ -16,7 +14,7 @@ const InputField: FC<Props> = ({ className, variant, name, textArea, label = nam
   const [field, meta, errors] = useField(name);
   const isError = meta.touched && meta.error;
   return (
-    <Wrapper size={variant} className="">
+    <>
       <div className={className}>
         <label
           htmlFor={field.name}
@@ -54,7 +52,7 @@ const InputField: FC<Props> = ({ className, variant, name, textArea, label = nam
           ) : null}
         </div>
       </div>
-    </Wrapper>
+    </>
   );
 };
 

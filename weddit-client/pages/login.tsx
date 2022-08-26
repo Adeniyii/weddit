@@ -1,6 +1,7 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
 import { withUrqlClient } from "next-urql";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import React from "react";
 import { createURQLClient } from "utils/createURQLClient";
@@ -16,7 +17,8 @@ const login = () => {
 
   return (
     <Layout>
-      <Wrapper size="medium" className="pt-[100px]">
+      <Wrapper size="small" className="px-4">
+        <h1 className="font-bold text-2xl mb-10">Login</h1>
         <Formik
           initialValues={{ email: "", password: "" }}
           onSubmit={async (details, { setErrors }) => {
@@ -25,10 +27,10 @@ const login = () => {
               setErrors(toErrorMap(response.data.login.errors));
             } else if (response.data?.login.user) {
               // check if we redirected from a previous page, and redirect back there after login
-              if (typeof router.query.next == "string"){
-                router.push(router.query.next);
+              if (typeof router.query.next === "string") {
+                router.replace(router.query.next);
               } else {
-                router.push("/")
+                router.replace("/");
               }
             }
           }}
@@ -48,9 +50,16 @@ const login = () => {
                 placeholder="*********"
                 type="password"
               />
-              <Button type="submit" className="mt-10 block">
-                {fetching ? "..." : "submit"}
-              </Button>
+              <div className="flex mt-5 items-center">
+                <Button type="submit" className="mr-auto">
+                  {fetching ? "..." : "submit"}
+                </Button>
+                <Link href="/forgot-password" passHref>
+                  <a className="text-blue-600 hover:underline">
+                    forgot password?
+                  </a>
+                </Link>
+              </div>
             </Form>
           )}
         </Formik>

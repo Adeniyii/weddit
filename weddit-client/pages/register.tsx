@@ -1,6 +1,7 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
 import { withUrqlClient } from "next-urql";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { createURQLClient } from "utils/createURQLClient";
 import Button from "../components/Button";
@@ -15,7 +16,8 @@ const Register = () => {
 
   return (
     <Layout>
-      <Wrapper size="medium" className="pt-[100px]">
+      <Wrapper size="small" className="px-4">
+        <h1 className="font-bold text-2xl mb-10">Register</h1>
         <Formik
           onSubmit={async (details, { setErrors }) => {
             const response = await register({ details });
@@ -48,9 +50,16 @@ const Register = () => {
                 placeholder="*********"
                 type="password"
               />
-              <Button type="submit" className="mt-10 block">
-                {registering ? "..." : "submit"}
-              </Button>
+              <div className="flex mt-5 items-center">
+                <Button type="submit" className="mr-auto">
+                  {registering ? "..." : "submit"}
+                </Button>
+                <Link href="/login" passHref>
+                  <a className="text-blue-600 hover:underline">
+                    Have an account?
+                  </a>
+                </Link>
+              </div>
             </Form>
           )}
         </Formik>

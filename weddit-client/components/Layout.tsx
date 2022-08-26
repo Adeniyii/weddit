@@ -10,7 +10,7 @@ const Layout: FC<Props> = ({children}) => {
 	return (
     <>
       <NavBar />
-      <Wrapper>{children}</Wrapper>
+      <Wrapper size="medium" className="py-[70px]">{children}</Wrapper>
     </>
   );
 }

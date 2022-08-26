@@ -1,8 +1,6 @@
 import { cacheExchange } from "@urql/exchange-graphcache";
 import {
-  ChangePasswordMutation, LoginMutation, LogoutMutation, MeDocument, MeQuery, NewPostMutation,
-  PostsDocument,
-  PostsQuery, RegisterMutation
+  ChangePasswordMutation, LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation
 } from "generated/graphql";
 import { NextUrqlClientConfig } from "next-urql";
 import Router from "next/router";
@@ -76,15 +74,6 @@ export const createURQLClient: NextUrqlClientConfig = (ssrExchange) => ({
                   return data;
                 }
                 return { me: result.changePassword.user };
-              }
-            );
-          },
-          addPost: (result: NewPostMutation, args, cache, info) => {
-            cache.updateQuery(
-              { query: PostsDocument as TypedDocumentNode<PostsQuery> },
-              (data) => {
-                data?.posts.push(result.addPost);
-                return data;
               }
             );
           },

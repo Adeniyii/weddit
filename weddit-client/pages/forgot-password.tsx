@@ -12,7 +12,8 @@ const ForgotPassword = () => {
   const [{ fetching, data }, resetPassword] = useForgotPasswordMutation();
   return (
     <Layout>
-      <Wrapper size="medium" className="pt-[100px]">
+      <Wrapper size="small" className="px-4">
+        <h1 className="font-bold text-2xl mb-10">Forgot password</h1>
         <Formik
           initialValues={{ email: "" }}
           onSubmit={async ({ email }) => {
@@ -28,10 +29,14 @@ const ForgotPassword = () => {
                 placeholder="James Dean"
                 className="mb-4"
               />
-              <Button type="submit" className="mt-10 block">
+              <Button type="submit" className="mt-5 block">
                 {fetching ? "..." : "submit"}
               </Button>
-              {data?.forgotPassword && <p className="text-green-600 text-center mt-3">Reset link sent!</p>}
+              {data?.forgotPassword && (
+                <p className="text-green-600 text-center mt-3">
+                  Reset link sent!
+                </p>
+              )}
             </Form>
           )}
         </Formik>

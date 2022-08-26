@@ -81,6 +81,7 @@ export type Post = {
   creatorId: Scalars['Float'];
   id: Scalars['ID'];
   points: Scalars['Float'];
+  snippet: Scalars['String'];
   text: Scalars['String'];
   title: Scalars['String'];
   updatedAt: Scalars['String'];
@@ -101,6 +102,12 @@ export type Query = {
 
 export type QueryPostArgs = {
   id: Scalars['Float'];
+};
+
+
+export type QueryPostsArgs = {
+  cursor?: InputMaybe<Scalars['String']>;
+  limit?: InputMaybe<Scalars['Int']>;
 };
 
 export type User = {
@@ -176,10 +183,13 @@ export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type MeQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string, email: string, username: string } | null };
 
-export type PostsQueryVariables = Exact<{ [key: string]: never; }>;
+export type PostsQueryVariables = Exact<{
+  cursor?: InputMaybe<Scalars['String']>;
+  limit?: InputMaybe<Scalars['Int']>;
+}>;
 
 
-export type PostsQuery = { __typename?: 'Query', posts: Array<{ __typename?: 'Post', id: string, title: string, points: number, text: string, creatorId: number }> };
+export type PostsQuery = { __typename?: 'Query', posts: Array<{ __typename?: 'Post', id: string, title: string, points: number, text: string, creatorId: number, createdAt: string, updatedAt: string, snippet: string }> };
 
 export const BasicErrorFragmentDoc = gql`
     fragment BasicError on FieldError {
@@ -283,13 +293,16 @@ export function useMeQuery(options?: Omit<Urql.UseQueryArgs<MeQueryVariables>, '
   return Urql.useQuery<MeQuery, MeQueryVariables>({ query: MeDocument, ...options });
 };
 export const PostsDocument = gql`
-    query Posts {
-  posts {
+    query Posts($cursor: String, $limit: Int) {
+  posts(cursor: $cursor, limit: $limit) {
     id
     title
     points
     text
     creatorId
+    createdAt
+    updatedAt
+    snippet
   }
 }
     `;

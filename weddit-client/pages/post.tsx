@@ -17,7 +17,8 @@ const post = () => {
 
   return (
     <Layout>
-      <Wrapper size="medium" className="pt-[100px]">
+      <Wrapper size="medium" className="px-4">
+        <h1 className="font-bold text-2xl mb-10">New post</h1>
         <Formik
           initialValues={{ text: "", title: "" }}
           onSubmit={async (details, { setErrors }) => {
@@ -40,10 +41,9 @@ const post = () => {
                 name="text"
                 variant="small"
                 placeholder="text"
-                className="mb-4"
                 textArea
               />
-              <Button type="submit" className="mt-10 block">
+              <Button type="submit" className="mt-5">
                 {fetching ? "..." : "post"}
               </Button>
             </Form>
