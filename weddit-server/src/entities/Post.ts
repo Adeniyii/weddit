@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from "type-graphql";
+import { Field, ID, Int, ObjectType } from "type-graphql";
 import {
 	BaseEntity,
   Column,
@@ -31,11 +31,11 @@ export class Post extends BaseEntity {
   @OneToMany(() => Updoot, (updoot) => updoot.post)
   updoots: Updoot[]
 
-  @Field()
+  @Field(() => String, {nullable: true})
   @Column()
   text!: string
 
-  @Field()
+  @Field(() => Int, {nullable: true})
   @Column({type: "int"})
   creatorId!: number
 

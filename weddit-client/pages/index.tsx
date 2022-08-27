@@ -9,7 +9,7 @@ import Button from "components/Button";
 import { useState } from "react";
 
 const Home: NextPage = () => {
-  const [variables, setVariables] = useState({cursor: null as null | string, limit: 33})
+  const [variables, setVariables] = useState({cursor: null as null | string, limit: 15})
   const [{ data, fetching }] = usePostsQuery({ variables });
 
   return (

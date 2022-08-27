@@ -1,6 +1,6 @@
 import { cacheExchange, Resolver } from "@urql/exchange-graphcache";
 import {
-  ChangePasswordMutation, LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation
+  ChangePasswordMutation, LoginMutation, LogoutMutation, MeDocument, MeQuery, NewPostMutation, RegisterMutation
 } from "generated/graphql";
 import { NextUrqlClientConfig } from "next-urql";
 import Router from "next/router";
@@ -111,6 +111,16 @@ export const createURQLClient: NextUrqlClientConfig = (ssrExchange) => ({
               }
             );
           },
+          addPost(result: NewPostMutation, args, cache, info) {
+            const allFields = cache.inspectFields("Query");
+            const postFields = allFields.filter((fi) => {
+              return fi.fieldName === "posts"
+            })
+
+            postFields.forEach(fi => {
+              cache.invalidate("Query", "posts", fi.arguments)
+            })
+          }
         },
       },
     }),
