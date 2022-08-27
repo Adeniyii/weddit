@@ -1,3 +1,4 @@
+import { Updoot } from "../entities/Updoot";
 import {
   Arg,
   Ctx,
@@ -10,7 +11,7 @@ import {
   Query,
   Resolver,
   Root,
-  UseMiddleware
+  UseMiddleware,
 } from "type-graphql";
 import { Post } from "../entities/Post";
 import { isAuth } from "../middleware/isAuth";
@@ -27,30 +28,68 @@ class PostDetails {
 @ObjectType()
 class PaginatedPosts {
   @Field(() => [Post])
-  posts: Post[]
+  posts: Post[];
   @Field()
-  next: boolean
+  next: boolean;
 }
 
 @Resolver(Post)
 export class PostResolver {
   // This field resolver can also be placed in the entity class as an extra field
   @FieldResolver(() => String)
-  async snippet(@Root() post: Post){
-    return post.text.slice(0, 150)
+  async snippet(@Root() post: Post) {
+    return post.text.slice(0, 150);
+  }
+
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg("postId") postId: number,
+    @Arg("value") value: number,
+    @Ctx() { req }: MyContext
+  ) {
+    const { userId } = req.session
+    const vibe = value !== -1 ? 1 : -1
+
+    // await Updoot.insert({
+    //   userId,
+    //   postId,
+    //   vibe
+    // })
+
+    // using taplate strings to insert parameters into a raw sql query is generally bad practice,
+    // as there is no string escaping happening and SQL injection can occur.
+    // using the arguments array runs string escaping on the args. Use that where possible.
+    await Post.query(
+      `
+      START TRANSACTION;
+
+      INSERT INTO updoot ("userId", "postId", "vibe")
+      VALUES (${userId}, ${postId}, ${vibe});
+
+      UPDATE post
+      set points = points + ${vibe}
+      WHERE id = ${postId};
+
+      COMMIT;
+    `
+    );
+
+    return true
   }
 
   // Defines a resolver to get all posts from our database
   @Query(() => PaginatedPosts)
   async posts(
-    @Arg("limit", () => Int, {defaultValue: 10, nullable: true}) limit: number,
+    @Arg("limit", () => Int, { defaultValue: 10, nullable: true })
+    limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string
   ): Promise<PaginatedPosts> {
     // To cap the posts queried by the client at 50 items
-    const realLimit = Math.min(50, limit)
+    const realLimit = Math.min(50, limit);
     const queryParams: any = [realLimit + 1];
 
-    if (cursor){
+    if (cursor) {
       queryParams.push(new Date(parseInt(cursor)));
     }
 
@@ -74,8 +113,13 @@ export class PostResolver {
       queryParams
     );
 
-    const fetchedMore = result.length > realLimit
-    return {posts: fetchedMore ? result.slice(0, result.length - 1) : result, next: fetchedMore}
+    console.log("results: ", result);
+
+    const fetchedMore = result.length > realLimit;
+    return {
+      posts: fetchedMore ? result.slice(0, result.length - 1) : result,
+      next: fetchedMore,
+    };
   }
 
   // Defines a resolver to get a post from our database

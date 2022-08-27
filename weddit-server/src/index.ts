@@ -13,6 +13,7 @@ import {DataSource} from 'typeorm'
 import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 import path from "path";
+import { Updoot } from "./entities/Updoot";
 
 // hack to fix the error: Property '<property>' does not exist on type 'Session & Partial<SessionData> when setting a new property on the req.session object
 declare module "express-session" {
@@ -24,7 +25,7 @@ declare module "express-session" {
 const main = async () => {
   // Typeorm setup
   const conn = await new DataSource({
-    entities: [Post, User],
+    entities: [Post, User, Updoot],
     database: "weddit2",
     username: "postgres",
     password: "postgres",
