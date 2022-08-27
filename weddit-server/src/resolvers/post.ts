@@ -1,4 +1,3 @@
-import { Post } from "../entities/Post";
 import {
   Arg,
   Ctx,
@@ -11,10 +10,11 @@ import {
   Query,
   Resolver,
   Root,
-  UseMiddleware,
+  UseMiddleware
 } from "type-graphql";
-import { MyContext } from "../types";
+import { Post } from "../entities/Post";
 import { isAuth } from "../middleware/isAuth";
+import { MyContext } from "../types";
 
 @InputType()
 class PostDetails {
@@ -48,16 +48,32 @@ export class PostResolver {
   ): Promise<PaginatedPosts> {
     // To cap the posts queried by the client at 50 items
     const realLimit = Math.min(50, limit)
-    // Using the querybuilder to implement custom pagination logic using a limit and cursor strategy.
-    const qb = Post.createQueryBuilder("P")
-      .orderBy('"createdAt"', "DESC") // adding two quotes to createdAt to persist the capital cased `At`, else it throws an error
+    const queryParams: any = [realLimit + 1];
 
     if (cursor){
-      qb.where('"createdAt" < :cursor', { cursor: new Date(parseInt(cursor)) });
+      queryParams.push(new Date(parseInt(cursor)));
     }
-    // using + 1 to fetch more than the user requested, as a way to check if there are any more posts after what was requested
-    const result = await qb.take(realLimit + 1).getMany();
-    // check if fetched more than the user requested
+
+    const result = await Post.query(
+      `
+      SELECT p.*,
+      json_build_object(
+        'id', u.id,
+        'username', u.username,
+        'email', u.email,
+        'createdAt', u."createdAt",
+        'updatedAt', u."updatedAt"
+      ) creator
+      FROM post p
+      INNER JOIN public.user u
+      ON u.id = p."creatorId"
+      ${cursor ? `WHERE p."createdAt" < $2` : ""}
+      ORDER BY p."createdAt" DESC
+      LIMIT $1;
+    `,
+      queryParams
+    );
+
     const fetchedMore = result.length > realLimit
     return {posts: fetchedMore ? result.slice(0, result.length - 1) : result, next: fetchedMore}
   }

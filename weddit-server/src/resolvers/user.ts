@@ -3,11 +3,13 @@ import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   InputType,
   Mutation,
   ObjectType,
   Query,
   Resolver,
+  Root,
 } from "type-graphql";
 import { MyContext } from "src/types";
 import argon from "argon2";
@@ -54,6 +56,17 @@ class UserResponse {
 
 @Resolver(User)
 export class UserResolver {
+  // a field resolver to prevent the email of a user from being queried by other users
+  @FieldResolver()
+  email(@Root() root: User, @Ctx() {req}: MyContext) {
+    // if email does not belong to current user
+    if (root.id !== req.session.userId){
+      return ""
+    }
+    // else
+    return root.email
+  }
+
   @Query(() => User, { nullable: true })
   me(@Ctx() { req }: MyContext): Promise<User | null> | null {
     if (!req.session.userId) {
@@ -147,7 +160,7 @@ export class UserResolver {
     @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     // get user and validate if exists
-    const user = await User.findOne({where: {email}});
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       const errors: FieldError[] = [
         {
@@ -198,7 +211,7 @@ export class UserResolver {
     @Ctx() { redis }: MyContext,
     @Arg("email") email: string
   ) {
-    const user = await User.findOne({where: { email }});
+    const user = await User.findOne({ where: { email } });
 
     if (!user) {
       return true;
@@ -253,7 +266,7 @@ export class UserResolver {
     }
 
     const idNum = parseInt(userId as string);
-    const user = await User.findOne({where: { id: idNum }});
+    const user = await User.findOne({ where: { id: idNum } });
 
     if (!user) {
       return {
@@ -266,10 +279,13 @@ export class UserResolver {
       };
     }
 
-    await User.update({ id: idNum }, { password: await argon.hash(newPassword) });
+    await User.update(
+      { id: idNum },
+      { password: await argon.hash(newPassword) }
+    );
 
     // remove token from redis db, so a user cannot user that same refresh password token again
-    await redis.del(key)
+    await redis.del(key);
 
     // log the user in after changing their password // totally optional depending on the required behaviour
     req.session.userId = user.id;
