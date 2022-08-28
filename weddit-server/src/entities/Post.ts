@@ -23,7 +23,7 @@ export class Post extends BaseEntity {
   @Column()
   title!: string;
 
-  @Field()
+  @Field(() => Int)
   @Column({type: "int", default: 0})
   points!: number
 
@@ -31,11 +31,11 @@ export class Post extends BaseEntity {
   @OneToMany(() => Updoot, (updoot) => updoot.post)
   updoots: Updoot[]
 
-  @Field(() => String, {nullable: true})
+  @Field()
   @Column()
   text!: string
 
-  @Field(() => Int, {nullable: true})
+  @Field(() => Int)
   @Column({type: "int"})
   creatorId!: number
 
@@ -45,11 +45,11 @@ export class Post extends BaseEntity {
 
   @Field(() => String)
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Field(() => String)
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 /**

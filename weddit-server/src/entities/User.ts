@@ -14,7 +14,7 @@ export class User extends BaseEntity {
   @Column({ unique: true })
   username!: string;
 
-  @Field(() => String, {nullable: true})
+  @Field()
   @Column({ unique: true })
   email!: string;
 
@@ -24,15 +24,15 @@ export class User extends BaseEntity {
   @OneToMany(() => Post, (post) => post.creator)
   posts!: Post[]
 
-  @Field(() => [Updoot], {nullable: true})
+  // @Field(() => [Updoot], {nullable: true})
   @OneToMany(() => Updoot, (updoot) => updoot.user)
   updoots: Updoot[]
 
-  @Field(() => String, {nullable: true})
+  @Field(() => String)
   @CreateDateColumn()
   createdAt: Date;
 
-  @Field(() => String, {nullable: true})
+  @Field(() => String)
   @UpdateDateColumn()
   updatedAt: Date;
 }
