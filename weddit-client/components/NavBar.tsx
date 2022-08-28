@@ -6,19 +6,27 @@ import Button from "./Button";
 import Wrapper from "./Wrapper";
 
 const NavBar = () => {
-  const [{fetching: loggingOut}, logout] = useLogoutMutation()
+  const [{ fetching: loggingOut }, logout] = useLogoutMutation();
+  const [{ data, fetching }] = useMeQuery();
+
+  /*
+  // no need to pause fetching if we are on the server, because we are now passing the cookie
+  // sent by the browser with a request along to the api from the nextjs server.
+  // thus the Me resolver on the graphql server receives the users cookie and can validate
+  // the user before any html is built.
   const [{ data, fetching }] = useMeQuery({
     pause: isServer()
-  });
+  }); */
 
   const handleLogout = () => {
-    logout({})
-  }
+    logout({});
+  };
 
   let body;
-  if (fetching || isServer()){
+  // if (fetching || isServer()){
+  if (fetching) {
     body = <p className="ml-3 text-green-800 font-bold">...</p>;
-  }else if (!data?.me){
+  } else if (!data?.me) {
     body = (
       <nav>
         <ul className="flex gap-4">

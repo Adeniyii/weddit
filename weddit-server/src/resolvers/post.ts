@@ -41,27 +41,71 @@ export class PostResolver {
     return post.text.slice(0, 150);
   }
 
-  @Mutation(() => Boolean)
+  @Mutation(() => Post)
   @UseMiddleware(isAuth)
   async vote(
     @Arg("postId") postId: number,
     @Arg("value") value: number,
     @Ctx() { req }: MyContext
-  ) {
+  ): Promise<Post | null> {
     const { userId } = req.session
     const vibe = value !== -1 ? 1 : -1
 
-    // await Updoot.insert({
-    //   userId,
-    //   postId,
-    //   vibe
-    // })
+    const foundDoot = await Updoot.findOne({where: {postId, userId}})
 
-    // using taplate strings to insert parameters into a raw sql query is generally bad practice,
-    // as there is no string escaping happening and SQL injection can occur.
-    // using the arguments array runs string escaping on the args. Use that where possible.
-    await Post.query(
-      `
+    // if a user has voted before, and tries to vote again with the same vibe, then undo the previous vote
+    // e.g, I've upvoted before, if I click `upvote` again, my previous upvote should be removed.
+    if (foundDoot && foundDoot.vibe === vibe){
+      await Post.getRepository().manager.transaction(async (tm) => {
+        // delete my upvote entry
+        await tm.query(
+          `
+          DELETE FROM updoot
+          WHERE "userId" = $1 AND "postId" = $2;
+        `,
+          [userId, postId]
+        );
+
+        // subtract my upvote/downvote from post points
+        await tm.query(
+          `
+          UPDATE post
+          set points = points - $1
+          WHERE id = $2
+        `,
+          [vibe, postId]
+        );
+      });
+      // if a user has voted before, and tries to vote again with a different vibe, then update vibe to the new vibe
+      // e.g, I've upvoted before, if I click `downvote`, my previous upvote should be replaced with a downvote.
+    } else if (foundDoot && foundDoot.vibe !== vibe) {
+      await Post.getRepository().manager.transaction(async (tm) => {
+        // change the vibe of my previous upvote entry
+        await tm.query(
+          `
+          UPDATE updoot
+          set vibe = $1
+          WHERE "userId" = $2 AND "postId" = $3;
+        `,
+          [vibe, userId, postId]
+        );
+
+        // update the post points by twice the value of my new vibe to remove the previous vibe point and add a new vibe point
+        await tm.query(
+          `
+          UPDATE post
+          set points = points + $1
+          WHERE id = $2
+        `,
+          [vibe * 2, postId]
+        );
+      });
+    } else {
+      // using template strings to insert parameters into a raw sql query is generally bad practice,
+      // as there is no string escaping happening and SQL injection can occur.
+      // using the arguments array runs string escaping on the args. Use that where possible.
+      /* await Post.query(
+        `
       START TRANSACTION;
 
       INSERT INTO updoot ("userId", "postId", "vibe")
@@ -73,9 +117,60 @@ export class PostResolver {
 
       COMMIT;
     `
+      ); */
+
+      await Post.getRepository().manager.transaction(async (tm) => {
+        // change the vibe of my previous upvote entry
+        await tm.query(
+          `
+          INSERT INTO updoot (vibe, "userId", "postId")
+          VALUES ($1, $2, $3)
+        `,
+          [vibe, userId, postId]
+        );
+
+        // update the post points by twice the value of my new vibe to remove the previous vibe point and add a new vibe point
+        await tm.query(
+          `
+          UPDATE post
+          set points = points + $1
+          WHERE id = $2
+        `,
+          [vibe, postId]
+        );
+      });
+    }
+
+    const queryParams: any[] = [postId, postId];
+
+    if (userId) {
+      queryParams.push(userId);
+    }
+
+    const result = await Post.query(
+      `
+      SELECT p.*,
+      json_build_object(
+        'id', u.id,
+        'username', u.username,
+        'email', u.email,
+        'createdAt', u."createdAt",
+        'updatedAt', u."updatedAt"
+      ) creator,
+      ${
+        req.session.userId
+          ? '(SELECT vibe FROM updoot WHERE "userId" = $3 AND "postId" = $2) "voteStatus"'
+          : 'null as "voteStatus"'
+      }
+      FROM post p
+      INNER JOIN public.user u
+      ON u.id = p."creatorId"
+      WHERE p.id = $1
+    `,
+      queryParams
     );
 
-    return true
+    return result[0]
   }
 
   // Defines a resolver to get all posts from our database
@@ -83,11 +178,16 @@ export class PostResolver {
   async posts(
     @Arg("limit", () => Int, { defaultValue: 10, nullable: true })
     limit: number,
-    @Arg("cursor", () => String, { nullable: true }) cursor: string
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
+    @Ctx() {req}: MyContext
   ): Promise<PaginatedPosts> {
     // To cap the posts queried by the client at 50 items
     const realLimit = Math.min(50, limit);
-    const queryParams: any = [realLimit + 1];
+    const queryParams: any[] = [realLimit + 1];
+
+    if (req.session.userId){
+      queryParams.push(req.session.userId);
+    }
 
     if (cursor) {
       queryParams.push(new Date(parseInt(cursor)));
@@ -102,18 +202,21 @@ export class PostResolver {
         'email', u.email,
         'createdAt', u."createdAt",
         'updatedAt', u."updatedAt"
-      ) creator
+      ) creator,
+      ${
+        req.session.userId
+          ? '(SELECT vibe FROM updoot WHERE "userId" = $2 AND "postId" = p.id) "voteStatus"'
+          : 'null as "voteStatus"'
+      }
       FROM post p
       INNER JOIN public.user u
       ON u.id = p."creatorId"
-      ${cursor ? `WHERE p."createdAt" < $2` : ""}
+      ${cursor ? `WHERE p."createdAt" < $3` : ""}
       ORDER BY p."createdAt" DESC
       LIMIT $1;
     `,
       queryParams
     );
-
-    console.log("results: ", result);
 
     const fetchedMore = result.length > realLimit;
     return {

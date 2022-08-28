@@ -1,3 +1,6 @@
 mutation Vote($value: Float!, $postId: Float!) {
-  vote(value: $value, postId: $postId)
+  vote(value: $value, postId: $postId) {
+    text
+    ...PostSnippet
+  }
 }

@@ -1,5 +1,6 @@
 import { PostSnippetFragment, useVoteMutation } from "generated/graphql";
 import React, { FC, useState } from "react";
+import cn from 'classnames'
 
 interface IPost {
   post: PostSnippetFragment;
@@ -11,28 +12,34 @@ const PostCard: FC<IPost> = ({ post }) => {
   const [loading, setLoading] = useState<LoadingState>("not-loading")
   const [, vote] = useVoteMutation()
   return (
-    <article className="w-full flex items-center border border-gray-300 rounded-md p-4">
+    <article className="w-full flex items-center border border-gray-300 rounded-md min-h-[150px] p-4">
       <div className="flex flex-col self-stretch justify-between items-center mr-4">
         <button
-          className="bg-gray-200 hover:bg-green-200 flex justify-center items-center h-5 w-5 pb-1 rounded"
+          className={cn(
+            "bg-gray-200 hover:bg-green-300 flex justify-center items-center h-5 w-5 pb-1 rounded",
+            { "bg-green-400 ": post?.voteStatus === 1 }
+          )}
           onClick={async () => {
             setLoading("upvoot-loading");
             await vote({ postId: parseInt(post.id), value: 1 });
             setLoading("not-loading");
           }}
         >
-          {loading === "upvoot-loading" ? ".." : "+"}
+          {loading === "upvoot-loading" ? " " : "+"}
         </button>
         <p className="text-sm text-gray-700 font-medium">{post.points}</p>
         <button
-          className="bg-gray-200 hover:bg-orange-200 flex justify-center items-center h-5 w-5 pb-1 rounded"
+          className={cn(
+            "bg-gray-200 hover:bg-orange-300 flex justify-center items-center h-5 w-5 pb-1 rounded",
+            { "bg-orange-400 ": post?.voteStatus === -1 }
+          )}
           onClick={async () => {
             setLoading("downvoot-loading");
             await vote({ postId: parseInt(post.id), value: -1 });
             setLoading("not-loading");
           }}
         >
-          {loading === "downvoot-loading" ? ".." : "-"}
+          {loading === "downvoot-loading" ? " " : "-"}
         </button>
       </div>
       <div className="flex flex-col w-full">

@@ -31,6 +31,12 @@ export class Post extends BaseEntity {
   @OneToMany(() => Updoot, (updoot) => updoot.post)
   updoots: Updoot[]
 
+  // this value will be either -1, 1, or 0 to show if a user has voted on this post or not
+  // It is a computed value only available as a graphQL query, but not as a column in the database
+  // It is computed on the fly for the user making the request for the post data.
+  @Field(() => Int, {nullable: true})
+  voteStatus: number
+
   @Field()
   @Column()
   text!: string
