@@ -1,4 +1,4 @@
-mutation Vote($value: Float!, $postId: Float!) {
+mutation Vote($value: Int!, $postId: Int!) {
   vote(value: $value, postId: $postId) {
     text
     ...PostSnippet

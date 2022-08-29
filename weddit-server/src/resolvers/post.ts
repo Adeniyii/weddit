@@ -16,6 +16,7 @@ import {
 import { Post } from "../entities/Post";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
+import { User } from "../entities/User";
 
 @InputType()
 class PostDetails {
@@ -41,11 +42,26 @@ export class PostResolver {
     return post.text.slice(0, 150);
   }
 
+  // Field resolver for the computed votestatus field.
+  @FieldResolver(() => Int, {nullable: true})
+  async voteStatus(@Root() post: Post, @Ctx() {req, updootLoader}: MyContext){
+    if (!req.session.userId){
+      return null
+    }
+    const updoot = await updootLoader.load({userId: req.session.userId, postId: post.id})
+    return updoot?.vibe || null
+  }
+
+  @FieldResolver(() => User)
+  async creator(@Root() post: Post, @Ctx() {userLoader}: MyContext){
+    return userLoader.load(post.creatorId)
+  }
+
   @Mutation(() => Post)
   @UseMiddleware(isAuth)
   async vote(
-    @Arg("postId") postId: number,
-    @Arg("value") value: number,
+    @Arg("postId", () => Int) postId: number,
+    @Arg("value", () => Int) value: number,
     @Ctx() { req }: MyContext
   ): Promise<Post | null> {
     const { userId } = req.session
@@ -141,36 +157,7 @@ export class PostResolver {
       });
     }
 
-    const queryParams: any[] = [postId, postId];
-
-    if (userId) {
-      queryParams.push(userId);
-    }
-
-    const result = await Post.query(
-      `
-      SELECT p.*,
-      json_build_object(
-        'id', u.id,
-        'username', u.username,
-        'email', u.email,
-        'createdAt', u."createdAt",
-        'updatedAt', u."updatedAt"
-      ) creator,
-      ${
-        req.session.userId
-          ? '(SELECT vibe FROM updoot WHERE "userId" = $3 AND "postId" = $2) "voteStatus"'
-          : 'null as "voteStatus"'
-      }
-      FROM post p
-      INNER JOIN public.user u
-      ON u.id = p."creatorId"
-      WHERE p.id = $1
-    `,
-      queryParams
-    );
-
-    return result[0]
+    return Post.findOne({where: {id: postId}, relations: {creator: true}})
   }
 
   // Defines a resolver to get all posts from our database
@@ -178,40 +165,30 @@ export class PostResolver {
   async posts(
     @Arg("limit", () => Int, { defaultValue: 10, nullable: true })
     limit: number,
-    @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
-    @Ctx() {req}: MyContext
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null
   ): Promise<PaginatedPosts> {
     // To cap the posts queried by the client at 50 items
     const realLimit = Math.min(50, limit);
     const queryParams: any[] = [realLimit + 1];
 
-    if (req.session.userId){
-      queryParams.push(req.session.userId);
-    }
-
     if (cursor) {
       queryParams.push(new Date(parseInt(cursor)));
     }
 
+    /* json_build_object(
+      'id', u.id,
+      'username', u.username,
+      'email', u.email,
+      'createdAt', u."createdAt",
+      'updatedAt', u."updatedAt"
+    ) creator */
     const result = await Post.query(
       `
-      SELECT p.*,
-      json_build_object(
-        'id', u.id,
-        'username', u.username,
-        'email', u.email,
-        'createdAt', u."createdAt",
-        'updatedAt', u."updatedAt"
-      ) creator,
-      ${
-        req.session.userId
-          ? '(SELECT vibe FROM updoot WHERE "userId" = $2 AND "postId" = p.id) "voteStatus"'
-          : 'null as "voteStatus"'
-      }
+      SELECT p.*
       FROM post p
       INNER JOIN public.user u
       ON u.id = p."creatorId"
-      ${cursor ? `WHERE p."createdAt" < $3` : ""}
+      ${cursor ? `WHERE p."createdAt" < $2` : ""}
       ORDER BY p."createdAt" DESC
       LIMIT $1;
     `,
@@ -227,11 +204,12 @@ export class PostResolver {
 
   // Defines a resolver to get a post from our database
   @Query(() => Post, { nullable: true })
-  post(@Arg("id") id: number): Promise<Post | null> {
+  post(@Arg("id", () => Int) id: number): Promise<Post | null> {
+    // return Post.findOne({ where: { id }, relations: {creator: true} });
     return Post.findOne({ where: { id } });
   }
 
-  // Defines a resolver to creeate a post in our database
+  // Defines a resolver to creeate a post in our database.
   @Mutation(() => Post)
   // middleware that runs before the resolvers. Use to apply auth checks, validation, etc.
   @UseMiddleware(isAuth)
@@ -244,26 +222,36 @@ export class PostResolver {
 
   // Defines a resolver to update a post in our database
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth)
   async updatePost(
-    @Arg("id") id: number,
-    @Arg("title") title: string
+    @Arg("id", () => Int) id: number,
+    @Arg("title") title: string,
+    @Arg("text") text: string,
+    @Ctx() {req}: MyContext
   ): Promise<Post | null> {
     const post = await Post.findOne({ where: { id } });
-    if (post && title) {
-      await Post.update({ id }, { title });
+    if (post && title && text) {
+      const updatedPost = await Post.createQueryBuilder()
+        .update(Post)
+        .set({ title, text })
+        .where({ id, creatorId: req.session.userId })
+        .returning("*")
+        .execute();
+
+      return updatedPost.raw[0]
     }
-    return post;
+    return null;
   }
 
   // Defines a resolver to delete a post from our database
-  @Mutation(() => Post, { nullable: true })
-  async deletePost(@Arg("id") id: number): Promise<Post | null> {
-    const post = await Post.findOne({ where: { id } });
+  @Mutation(() => Boolean, { nullable: true })
+  @UseMiddleware(isAuth)
+  async deletePost(@Arg("id", () => Int) id: number, @Ctx() {req}: MyContext) {
     try {
-      await Post.delete(id);
+      await Post.delete({id, creatorId: req.session.userId});
     } catch (error) {
       return null;
     }
-    return post;
+    return true;
   }
 }

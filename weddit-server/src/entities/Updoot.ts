@@ -22,7 +22,8 @@ export class Updoot extends BaseEntity {
   user!: User;
 
   // many updoots to one post
-  @ManyToOne(() => Post, (post) => post.updoots)
+  // the cascade option on delete tells the updoot object to be deleted if its linked post is deleted.
+  @ManyToOne(() => Post, (post) => post.updoots, {onDelete: "CASCADE"})
   post!: Post;
 
   @Column({ type: "int" })

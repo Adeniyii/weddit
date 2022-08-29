@@ -24,7 +24,7 @@ const Home: NextPage = () => {
         <br />
         <ul className="flex flex-col gap-2 w-full">
           {data?.posts
-            ? data?.posts.posts.map((post) => <PostCard key={post.id} post={post} />)
+            ? data?.posts.posts.map((post) => !post ? null : <PostCard key={post.id} post={post} />)
             : "...loading"}
         </ul>
         {!fetching && data?.posts && data.posts.next ? (

@@ -7,13 +7,15 @@ import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import session from "express-session";
 import connectRedis from "connect-redis";
-import Redis from "ioredis"
+import Redis from "ioredis";
 import { MyContext } from "./types";
-import {DataSource} from 'typeorm'
+import { DataSource } from "typeorm";
 import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 import path from "path";
 import { Updoot } from "./entities/Updoot";
+import { createUserLoader } from "./utils/createUserLoader";
+import { createUpdootLoader } from "./utils/createUpdootLoader";
 
 // hack to fix the error: Property '<property>' does not exist on type 'Session & Partial<SessionData> when setting a new property on the req.session object
 declare module "express-session" {
@@ -32,10 +34,10 @@ const main = async () => {
     type: "postgres",
     synchronize: true, // creates tables automatically from new entities without having to run migrations like in mikroorm
     logging: true,
-    migrations: [path.join(__dirname, "migrations/*.js")]
-  }).initialize()
+    migrations: [path.join(__dirname, "migrations/*.js")],
+  }).initialize();
 
-  await conn.runMigrations()
+  await conn.runMigrations();
   // await Post.clear()
 
   const app = express();
@@ -50,7 +52,7 @@ const main = async () => {
   };
 
   const RedisStore = connectRedis(session);
-  const redisClient = new Redis()
+  const redisClient = new Redis();
   redisClient.connect().catch(console.error);
 
   // this session middleware registration should come before the apolloserver middleware registration
@@ -82,7 +84,13 @@ const main = async () => {
       resolvers: [PostResolver, UserResolver],
     }),
     // Provides an Entity manager instance, and the req and res objects to the resolvers on the context object
-    context: ({ req, res }): MyContext => ({ req, res, redis: redisClient }),
+    context: ({ req, res }): MyContext => ({
+      req,
+      res,
+      redis: redisClient,
+      userLoader: createUserLoader(),
+      updootLoader: createUpdootLoader(),
+    }),
   });
 
   await apolloServer.start();

@@ -5,9 +5,9 @@ import { withUrqlClient } from "next-urql";
 import { useRouter } from "next/router";
 import { createURQLClient } from "utils/createURQLClient";
 import { useIsAuth } from "utils/useIsAuth";
-import Button from "../components/Button";
-import InputField from "../components/InputField";
-import Wrapper from "../components/Wrapper";
+import Button from "../../components/Button";
+import InputField from "../../components/InputField";
+import Wrapper from "../../components/Wrapper";
 
 const post = () => {
   const [{ fetching }, createPost] = useNewPostMutation();

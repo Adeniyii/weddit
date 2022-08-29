@@ -1,6 +1,7 @@
 import { cacheExchange, Resolver } from "@urql/exchange-graphcache";
 import {
   ChangePasswordMutation,
+  DeletePostMutationVariables,
   LoginMutation,
   LogoutMutation,
   MeDocument,
@@ -36,9 +37,7 @@ const cursorPagination = (): Resolver => {
     }
 
     const customKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
-
     const isItInTheCache = cache.resolve(entityKey, customKey);
-
     // This may be set to true at any point in time (by your custom resolver or by Graphcache) to indicate that some data is uncached and missing
     info.partial = !isItInTheCache;
 
@@ -98,6 +97,9 @@ export const createURQLClient: NextUrqlClientConfig = (ssrExchange, ctx) => {
         },
         updates: {
           Mutation: {
+            deletePost: (result, args: DeletePostMutationVariables, cache, info) => {
+              cache.invalidate({ __typename: "Post", id: args.id });
+            },
             login: (result: LoginMutation, args, cache, info) => {
               cache.updateQuery(
                 { query: MeDocument as TypedDocumentNode<MeQuery> },
