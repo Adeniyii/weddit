@@ -1,18 +1,17 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
-import { withUrqlClient } from "next-urql";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React from "react";
-import { createURQLClient } from "utils/createURQLClient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import Wrapper from "../components/Wrapper";
-import { useLoginMutation } from "../generated/graphql";
+import { MeDocument, MeQuery, useLoginMutation } from "../generated/graphql";
 import toErrorMap from "../utils/toErrorMap";
+import withApolloClient from "utils/createApolloClient";
 
 const login = () => {
-  const [{ fetching }, login] = useLoginMutation();
+  const [login, { loading } ] = useLoginMutation();
   const router = useRouter();
 
   return (
@@ -22,12 +21,18 @@ const login = () => {
         <Formik
           initialValues={{ email: "", password: "" }}
           onSubmit={async (details, { setErrors }) => {
-            const response = await login({ details });
+            const response = await login({ variables: { details }, update: (cache, {data}) => {
+              cache.writeQuery<MeQuery>({
+                query: MeDocument,
+                data: {__typename: "Query", me: data?.login.user }
+              })
+              cache.evict({fieldName: "posts"})
+            } });
             if (response.data?.login.errors) {
               setErrors(toErrorMap(response.data.login.errors));
             } else if (response.data?.login.user) {
               // check if we redirected from a previous page, and redirect back there after login
-              if (typeof router.query.next === "string") {
+              if (typeof router.query?.next === "string") {
                 router.replace(router.query.next);
               } else {
                 router.replace("/");
@@ -52,7 +57,7 @@ const login = () => {
               />
               <div className="flex mt-5 items-center">
                 <Button type="submit" className="mr-auto">
-                  {fetching ? "..." : "submit"}
+                  {loading ? "..." : "submit"}
                 </Button>
                 <Link href="/forgot-password" passHref>
                   <a className="text-blue-600 hover:underline">
@@ -68,4 +73,4 @@ const login = () => {
   );
 };
 
-export default withUrqlClient(createURQLClient)(login);
+export default withApolloClient({ssr: false})(login);

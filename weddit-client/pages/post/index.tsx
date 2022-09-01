@@ -1,16 +1,15 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
 import { useNewPostMutation } from "generated/graphql";
-import { withUrqlClient } from "next-urql";
 import { useRouter } from "next/router";
-import { createURQLClient } from "utils/createURQLClient";
 import { useIsAuth } from "utils/useIsAuth";
 import Button from "../../components/Button";
 import InputField from "../../components/InputField";
 import Wrapper from "../../components/Wrapper";
+import withApolloClient from "utils/createApolloClient"
 
 const post = () => {
-  const [{ fetching }, createPost] = useNewPostMutation();
+  const [createPost, { loading }] = useNewPostMutation();
   const router = useRouter();
   // custom hook to check if there is a current user logged in, and redirects to the login page if no user.
   useIsAuth();
@@ -22,8 +21,10 @@ const post = () => {
         <Formik
           initialValues={{ text: "", title: "" }}
           onSubmit={async (details, { setErrors }) => {
-            const { error } = await createPost({ details });
-            if (!error) {
+            const { errors } = await createPost({ variables: { details }, update: (cache) => {
+              cache.evict({fieldName: "posts"})
+            } });
+            if (!errors) {
               router.push("/");
             }
           }}
@@ -44,7 +45,7 @@ const post = () => {
                 textArea
               />
               <Button type="submit" className="mt-5">
-                {fetching ? "..." : "post"}
+                {loading ? "..." : "post"}
               </Button>
             </Form>
           )}
@@ -54,4 +55,4 @@ const post = () => {
   );
 };
 
-export default withUrqlClient(createURQLClient)(post);
+export default withApolloClient({ssr: false})(post);

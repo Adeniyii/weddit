@@ -1,16 +1,15 @@
 import type { NextPage } from "next";
-import { withUrqlClient } from "next-urql";
-import { createURQLClient } from "utils/createURQLClient";
 import { usePostsQuery } from "generated/graphql";
 import Layout from "components/Layout";
 import Link from "next/link";
 import PostCard from "components/PostCard";
 import Button from "components/Button";
-import { useState } from "react";
+import withApolloClient from "utils/createApolloClient"
 
-const Home: NextPage = () => {
-  const [variables, setVariables] = useState({cursor: null as null | string, limit: 15})
-  const [{ data, fetching }] = usePostsQuery({ variables });
+const Home = () => {
+  const { data, loading, fetchMore, variables } = usePostsQuery({
+    variables: { cursor: null, limit: 15 }, notifyOnNetworkStatusChange: true
+  });
 
   return (
     <>
@@ -27,9 +26,26 @@ const Home: NextPage = () => {
             ? data?.posts.posts.map((post) => !post ? null : <PostCard key={post.id} post={post} />)
             : "...loading"}
         </ul>
-        {!fetching && data?.posts && data.posts.next ? (
+        {!loading && data?.posts && data.posts.next ? (
           <Button type="submit" className="mt-5" onClick={() => {
-            setVariables(prev => ({...prev, cursor: data.posts.posts[data.posts.posts.length -1].createdAt}))
+            fetchMore({
+              variables: {
+                ...variables,
+                cursor: data.posts.posts[data.posts.posts.length - 1].createdAt
+              },
+              // updateQuery(previousQueryResult, {fetchMoreResult}) {
+              //   if (!fetchMoreResult) return previousQueryResult
+
+              //   return {
+              //     __typename: "Query",
+              //     posts: {
+              //       __typename: "PaginatedPosts",
+              //       next: fetchMoreResult.posts.next,
+              //       posts: [...previousQueryResult.posts.posts, ...fetchMoreResult.posts.posts]
+              //     }
+              //   }
+              // },
+            })
           }}>
             Load more
           </Button>
@@ -39,4 +55,4 @@ const Home: NextPage = () => {
   );
 };
 
-export default withUrqlClient(createURQLClient, { ssr: true })(Home);
+export default withApolloClient({ssr: true})(Home);

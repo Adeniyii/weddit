@@ -3,25 +3,24 @@ import InputField from "components/InputField";
 import Layout from "components/Layout";
 import Wrapper from "components/Wrapper";
 import { Formik, Form } from "formik";
-import { useChangePasswordMutation } from "generated/graphql";
-import { withUrqlClient } from "next-urql";
-import {useRouter} from "next/router";
+import { MeDocument, MeQuery, useChangePasswordMutation } from "generated/graphql";
+import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
-import { createURQLClient } from "utils/createURQLClient";
 import toErrorMap from "utils/toErrorMap";
+import withApolloClient from "utils/createApolloClient";
 
 const ChangePassword = () => {
-  const [{ fetching, data }, changePassword] = useChangePasswordMutation();
-  const [tokenError, setTokenError] = useState<string | null>()
-  const router = useRouter()
+  const [changePassword, { loading }] = useChangePasswordMutation();
+  const [tokenError, setTokenError] = useState<string | null>();
+  const router = useRouter();
 
   useEffect(() => {
-    if (tokenError){
+    if (tokenError) {
       setTimeout(() => {
-        setTokenError(null)
-      }, 1500)
+        setTokenError(null);
+      }, 1500);
     }
-  }, [tokenError])
+  }, [tokenError]);
 
   return (
     <Layout>
@@ -29,10 +28,21 @@ const ChangePassword = () => {
         <Formik
           initialValues={{ newPassword: "" }}
           onSubmit={async ({ newPassword }, { setErrors }) => {
-            const response = await changePassword({ newPassword, token: router.query?.token as string || "" });
+            const response = await changePassword({
+              variables: {
+                newPassword,
+                token: (router.query?.token as string) || "",
+              },
+              update: (cache, {data}) => {
+                cache.writeQuery<MeQuery>({
+                  query: MeDocument,
+                  data: {__typename: "Query", me: data?.changePassword.user}
+                })
+              }
+            });
             if (response.data?.changePassword.errors) {
               const errorMap = toErrorMap(response.data.changePassword.errors);
-              if ('token' in errorMap) setTokenError(errorMap.token)
+              if ("token" in errorMap) setTokenError(errorMap.token);
               setErrors(errorMap);
             } else if (response.data?.changePassword.user) {
               router.push("/");
@@ -50,9 +60,11 @@ const ChangePassword = () => {
                 className="mb-4"
               />
               <Button type="submit" className="mt-10 block">
-                {fetching ? "..." : "submit"}
+                {loading ? "..." : "submit"}
               </Button>
-              {tokenError ? <p className="text-red-500 mt-3 text-center">{tokenError}</p> : null}
+              {tokenError ? (
+                <p className="text-red-500 mt-3 text-center">{tokenError}</p>
+              ) : null}
             </Form>
           )}
         </Formik>
@@ -61,4 +73,4 @@ const ChangePassword = () => {
   );
 };
 
-export default withUrqlClient(createURQLClient)(ChangePassword);
+export default withApolloClient({ ssr: false })(ChangePassword);

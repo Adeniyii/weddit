@@ -1,17 +1,16 @@
 import Layout from "components/Layout";
 import { Form, Formik } from "formik";
-import { withUrqlClient } from "next-urql";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { createURQLClient } from "utils/createURQLClient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import Wrapper from "../components/Wrapper";
-import { useRegisterMutation } from "../generated/graphql";
+import { MeDocument, MeQuery, useRegisterMutation } from "../generated/graphql";
 import toErrorMap from "../utils/toErrorMap";
+import withApolloClient from "utils/createApolloClient";
 
 const Register = () => {
-  const [{ fetching: registering }, register] = useRegisterMutation();
+  const [register, { loading: registering }] = useRegisterMutation();
   const router = useRouter();
 
   return (
@@ -20,7 +19,15 @@ const Register = () => {
         <h1 className="font-bold text-2xl mb-10">Register</h1>
         <Formik
           onSubmit={async (details, { setErrors }) => {
-            const response = await register({ details });
+            const response = await register({
+              variables: { details },
+              update: (cache, { data }) => {
+                cache.writeQuery<MeQuery>({
+                  query: MeDocument,
+                  data: { __typename: "Query", me: data?.register.user },
+                });
+              },
+            });
             if (response.data?.register.errors) {
               setErrors(toErrorMap(response.data.register.errors));
             } else if (response.data?.register.user) {
@@ -68,4 +75,4 @@ const Register = () => {
   );
 };
 
-export default withUrqlClient(createURQLClient)(Register);
+export default withApolloClient({ ssr: false })(Register);

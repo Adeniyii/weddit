@@ -1,4 +1,4 @@
-import { cacheExchange, Resolver } from "@urql/exchange-graphcache";
+import { Cache, cacheExchange, Resolver } from "@urql/exchange-graphcache";
 import {
   ChangePasswordMutation,
   DeletePostMutationVariables,
@@ -59,6 +59,17 @@ const cursorPagination = (): Resolver => {
   };
 };
 
+const invalidatePosts = (cache: Cache) => {
+  const allFields = cache.inspectFields("Query");
+  const postFields = allFields.filter((fi) => {
+    return fi.fieldName === "posts";
+  });
+
+  postFields.forEach((fi) => {
+    cache.invalidate("Query", "posts", fi.arguments || {});
+  });
+}
+
 export const createURQLClient: NextUrqlClientConfig = (ssrExchange, ctx) => {
   // when ssr is enabled for a page, requests are first sent to the nextjs server before being forwarded to the destination api,
   // this request usually contains the users cookies which may be required by the target api.
@@ -98,7 +109,7 @@ export const createURQLClient: NextUrqlClientConfig = (ssrExchange, ctx) => {
         updates: {
           Mutation: {
             deletePost: (result, args: DeletePostMutationVariables, cache, info) => {
-              cache.invalidate({ __typename: "Post", id: args.id });
+              invalidatePosts(cache)
             },
             login: (result: LoginMutation, args, cache, info) => {
               cache.updateQuery(
@@ -110,6 +121,7 @@ export const createURQLClient: NextUrqlClientConfig = (ssrExchange, ctx) => {
                   return { me: result.login.user };
                 }
               );
+              invalidatePosts(cache)
             },
             register: (result: RegisterMutation, args, cache, info) => {
               cache.updateQuery(
@@ -145,14 +157,7 @@ export const createURQLClient: NextUrqlClientConfig = (ssrExchange, ctx) => {
               );
             },
             addPost(result: NewPostMutation, args, cache, info) {
-              const allFields = cache.inspectFields("Query");
-              const postFields = allFields.filter((fi) => {
-                return fi.fieldName === "posts";
-              });
-
-              postFields.forEach((fi) => {
-                cache.invalidate("Query", "posts", fi.arguments);
-              });
+              invalidatePosts(cache)
             },
             vote(result: VoteMutation, args, cache, info) {
               cache.updateQuery(

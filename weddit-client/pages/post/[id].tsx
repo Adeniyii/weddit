@@ -1,17 +1,16 @@
 import Layout from "components/Layout";
 import { usePostQuery } from "generated/graphql";
-import { withUrqlClient } from "next-urql";
 import { useRouter } from "next/router";
 import React from "react";
-import { createURQLClient } from "utils/createURQLClient";
+import withApolloClient from "utils/createApolloClient"
 
 const post = () => {
   const router = useRouter();
-  const [{ data, error, fetching }] = usePostQuery({
+  const { data, error, loading } = usePostQuery({
     variables: { id: parseInt(router.query.id as string) },
   });
 
-  if (fetching) {
+  if (loading) {
     return (
       <Layout>
         <p>Loading...</p>
@@ -45,4 +44,4 @@ const post = () => {
   );
 };
 
-export default withUrqlClient(createURQLClient, { ssr: true })(post);
+export default withApolloClient({ssr: true})(post);

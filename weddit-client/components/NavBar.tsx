@@ -1,30 +1,35 @@
+import { useApolloClient } from "@apollo/client";
 import { useLogoutMutation, useMeQuery } from "generated/graphql";
 import Link from "next/link";
-import React from "react";
+import { useRouter } from "next/router";
+import React, { useEffect } from "react";
 import { isServer } from "utils/isServer";
 import Button from "./Button";
 import Wrapper from "./Wrapper";
 
 const NavBar = () => {
-  const [{ fetching: loggingOut }, logout] = useLogoutMutation();
-  const [{ data, fetching }] = useMeQuery();
+  const [logout, { loading: loggingOut }] = useLogoutMutation();
+  // const { data, loading } = useMeQuery();
+  const router = useRouter()
+  const apolloClient = useApolloClient()
 
-  /*
+
   // no need to pause fetching if we are on the server, because we are now passing the cookie
   // sent by the browser with a request along to the api from the nextjs server.
   // thus the Me resolver on the graphql server receives the users cookie and can validate
   // the user before any html is built.
-  const [{ data, fetching }] = useMeQuery({
-    pause: isServer()
-  }); */
+  const { data, loading } = useMeQuery();
 
-  const handleLogout = () => {
-    logout({});
+  const handleLogout = async () => {
+    await logout({});
+    // `clearStore` clears the cache without refetching active queries while `resetStore` clears the cache and refetches the active queries
+    await apolloClient.clearStore()
+    router.push("/login")
   };
 
   let body;
-  // if (fetching || isServer()){
-  if (fetching) {
+  if (loading){
+  // if (loading) {
     body = <p className="ml-3 text-green-800 font-bold">...</p>;
   } else if (!data?.me) {
     body = (

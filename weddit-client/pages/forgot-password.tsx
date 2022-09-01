@@ -4,12 +4,11 @@ import Layout from "components/Layout";
 import Wrapper from "components/Wrapper";
 import { Formik, Form } from "formik";
 import { useForgotPasswordMutation } from "generated/graphql";
-import { withUrqlClient } from "next-urql";
 import React from "react";
-import { createURQLClient } from "utils/createURQLClient";
+import withApolloClient from "utils/createApolloClient";
 
 const ForgotPassword = () => {
-  const [{ fetching, data }, resetPassword] = useForgotPasswordMutation();
+  const [resetPassword, { loading, data }] = useForgotPasswordMutation();
   return (
     <Layout>
       <Wrapper size="small" className="px-4">
@@ -17,7 +16,7 @@ const ForgotPassword = () => {
         <Formik
           initialValues={{ email: "" }}
           onSubmit={async ({ email }) => {
-            await resetPassword({ email });
+            await resetPassword({ variables: { email } });
           }}
         >
           {({}) => (
@@ -30,7 +29,7 @@ const ForgotPassword = () => {
                 className="mb-4"
               />
               <Button type="submit" className="mt-5 block">
-                {fetching ? "..." : "submit"}
+                {loading ? "..." : "submit"}
               </Button>
               {data?.forgotPassword && (
                 <p className="text-green-600 text-center mt-3">
@@ -45,4 +44,4 @@ const ForgotPassword = () => {
   );
 };
 
-export default withUrqlClient(createURQLClient)(ForgotPassword);
+export default withApolloClient({ssr: false})(ForgotPassword);

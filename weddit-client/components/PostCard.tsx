@@ -3,11 +3,13 @@ import {
   useDeletePostMutation,
   useMeQuery,
   useVoteMutation,
+  VoteMutation,
 } from "generated/graphql";
 import React, { FC, useState } from "react";
 import cn from "classnames";
 import Link from "next/link";
 import Button from "./Button";
+import { ApolloCache, gql } from "@apollo/client";
 
 interface IPost {
   post: PostSnippetFragment;
@@ -15,11 +17,53 @@ interface IPost {
 
 type LoadingState = "not-loading" | "upvoot-loading" | "downvoot-loading";
 
+const updateAfterVote = (postId: number, voteValue: number, cache: ApolloCache<VoteMutation>) => {
+  let newPoints = 1;
+  let newVoteStatus = 1;
+  const cachedPost = cache.readFragment<{
+    id: number;
+    points: number;
+    voteStatus: number | null;
+  }>({
+    id: "Post" + postId,
+    fragment: gql`
+      fragment _ on Post {
+        id
+        points
+        voteStatus
+      }
+    `,
+  });
+  if (!cachedPost) return;
+  if (cachedPost.voteStatus === voteValue) {
+    newPoints = cachedPost.points - voteValue;
+  } else if (!cachedPost.voteStatus) {
+    newPoints = cachedPost.points + voteValue;
+  } else {
+    newPoints = cachedPost.points + (2 * voteValue);
+  }
+  // write fragment to cache
+  cache.writeFragment<{
+    points: number;
+    voteStatus: number | null;
+  }>({
+    id: "Post" + postId,
+    fragment: gql`
+      fragment _ on Post {
+        points
+        voteStatus
+      }
+    `,
+    data: { points: newPoints, voteStatus: newVoteStatus },
+  });
+}
+
+
 const PostCard: FC<IPost> = ({ post }) => {
   const [loading, setLoading] = useState<LoadingState>("not-loading");
-  const [, vote] = useVoteMutation();
-  const [{ data }] = useMeQuery();
-  const [{ fetching: deleting }, deletePost] = useDeletePostMutation();
+  const [vote] = useVoteMutation();
+  const { data } = useMeQuery();
+  const [deletePost] = useDeletePostMutation();
   return (
     <article className="w-full flex items-center border border-gray-300 rounded-md min-h-[150px] p-4">
       <div className="flex flex-col self-stretch justify-between items-center mr-4">
@@ -30,7 +74,10 @@ const PostCard: FC<IPost> = ({ post }) => {
           )}
           onClick={async () => {
             setLoading("upvoot-loading");
-            await vote({ postId: parseInt(post.id), value: 1 });
+            await vote({
+              variables: { postId: parseInt(post.id), value: 1 },
+              update: (cache) => updateAfterVote(parseInt(post.id), 1, cache),
+            });
             setLoading("not-loading");
           }}
         >
@@ -44,7 +91,10 @@ const PostCard: FC<IPost> = ({ post }) => {
           )}
           onClick={async () => {
             setLoading("downvoot-loading");
-            await vote({ postId: parseInt(post.id), value: -1 });
+            await vote({
+              variables: { postId: parseInt(post.id), value: -1 },
+              update: (cache) => updateAfterVote(parseInt(post.id), -1, cache),
+            });
             setLoading("not-loading");
           }}
         >
@@ -62,7 +112,11 @@ const PostCard: FC<IPost> = ({ post }) => {
             <div className="flex flex-col gap-4">
               <Button
                 className="bg-red-400 hover:bg-red-500 px-2 py-1 text-sm"
-                onClick={() => deletePost({ id: parseInt(post.id) })}
+                onClick={() =>
+                  deletePost({ variables: { id: parseInt(post.id) }, update: (cache) => {
+                    cache.evict({id: 'Post:' + post.id})
+                  } })
+                }
               >
                 Delete
               </Button>
